@@ -1,5 +1,7 @@
 package lexer
 
+import "fmt"
+
 func Hello() {
-	println("Hello World")
+	fmt.Println("Hello World")
 }
