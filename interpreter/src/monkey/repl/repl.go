@@ -20,7 +20,7 @@ const MONKEY_FACE = ` /~\
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 
-	for {
+	for run := true; run; run = scanner.Text() != "exit" {
 		fmt.Fprint(out, PROMPT)
 		scanned := scanner.Scan()
 		if !scanned {
