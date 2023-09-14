@@ -239,7 +239,10 @@ func evalIfExpression(
 	}
 }
 
-func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
+func evalIdentifier(
+	node *ast.Identifier,
+	env *object.Environment,
+) object.Object {
 	val, ok := env.Get(node.Value)
 	if !ok {
 		return newError("identifier not found: " + node.Value)
@@ -272,7 +275,10 @@ func isError(obj object.Object) bool {
 	return false
 }
 
-func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
+func evalExpressions(
+	exps []ast.Expression,
+	env *object.Environment,
+) []object.Object {
 	var result []object.Object
 
 	for _, e := range exps {
@@ -297,7 +303,10 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 	return unwrapReturnValue(evaluated)
 }
 
-func extendFunctionEnv(fn *object.Function, args []object.Object) *object.Environment {
+func extendFunctionEnv(
+	fn *object.Function,
+	args []object.Object,
+) *object.Environment {
 	env := object.NewEnclosedEnvironment(fn.Env)
 
 	for paramIdx, param := range fn.Parameters {
