@@ -245,7 +245,10 @@ func evalIdentifier(
 ) object.Object {
 	val, ok := env.Get(node.Value)
 	if !ok {
-		return newError("identifier not found: " + node.Value)
+		return newError(
+			fmt.Sprintf("Error at line %d col %d, identifier not found: %s",
+				node.Token.Line, node.Token.Col, node.Value))
+
 	}
 
 	return val
