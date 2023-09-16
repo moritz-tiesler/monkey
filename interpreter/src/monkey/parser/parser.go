@@ -413,12 +413,12 @@ func (p *Parser) Errors() []string {
 }
 
 func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %s, got %s instead",
-		t, p.peekToken.Type)
+	msg := fmt.Sprintf("Error at line %d col %d, expected next token to be %s, got %s instead",
+		p.peekToken.Line, p.peekToken.Col, t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
 }
 
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
-	msg := fmt.Sprintf("no prefix parse function of %s found", t)
+	msg := fmt.Sprintf("Error at line %d col %d, no prefix parse function of %s found", p.curToken.Line, p.curToken.Col, t)
 	p.errors = append(p.errors, msg)
 }
