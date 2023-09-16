@@ -14,7 +14,7 @@ type Lexer struct {
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: input}
+	l := &Lexer{input: input, col: -1}
 	l.readChar()
 	return l
 }
@@ -23,6 +23,7 @@ func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
 	l.skipWhitespace()
+	currCol := l.col
 
 	switch l.ch {
 	case '=':
@@ -32,12 +33,12 @@ func (l *Lexer) NextToken() token.Token {
 			literal := string(ch) + string(l.ch)
 			tok = token.Token{Type: token.EQ, Literal: literal}
 		} else {
-			tok = newToken(token.ASSIGN, l.ch, l.line, l.col)
+			tok = newToken(token.ASSIGN, l.ch, l.line, currCol)
 		}
 	case '+':
-		tok = newToken(token.PLUS, l.ch, l.line, l.col)
+		tok = newToken(token.PLUS, l.ch, l.line, currCol)
 	case '-':
-		tok = newToken(token.MINUS, l.ch, l.line, l.col)
+		tok = newToken(token.MINUS, l.ch, l.line, currCol)
 	case '!':
 		if l.peekChar() == '=' {
 			ch := l.ch
@@ -45,28 +46,28 @@ func (l *Lexer) NextToken() token.Token {
 			literal := string(ch) + string(l.ch)
 			tok = token.Token{Type: token.NOT_EQ, Literal: literal}
 		} else {
-			tok = newToken(token.BANG, l.ch, l.line, l.col)
+			tok = newToken(token.BANG, l.ch, l.line, currCol)
 		}
 	case '/':
-		tok = newToken(token.SLASH, l.ch, l.line, l.col)
+		tok = newToken(token.SLASH, l.ch, l.line, currCol)
 	case '*':
-		tok = newToken(token.ASTERISK, l.ch, l.line, l.col)
+		tok = newToken(token.ASTERISK, l.ch, l.line, currCol)
 	case '<':
-		tok = newToken(token.LT, l.ch, l.line, l.col)
+		tok = newToken(token.LT, l.ch, l.line, currCol)
 	case '>':
-		tok = newToken(token.GT, l.ch, l.line, l.col)
+		tok = newToken(token.GT, l.ch, l.line, currCol)
 	case ';':
-		tok = newToken(token.SEMICOLON, l.ch, l.line, l.col)
+		tok = newToken(token.SEMICOLON, l.ch, l.line, currCol)
 	case ',':
-		tok = newToken(token.COMMA, l.ch, l.line, l.col)
+		tok = newToken(token.COMMA, l.ch, l.line, currCol)
 	case '{':
-		tok = newToken(token.LBRACE, l.ch, l.line, l.col)
+		tok = newToken(token.LBRACE, l.ch, l.line, currCol)
 	case '}':
-		tok = newToken(token.RBRACE, l.ch, l.line, l.col)
+		tok = newToken(token.RBRACE, l.ch, l.line, currCol)
 	case '(':
-		tok = newToken(token.LPAREN, l.ch, l.line, l.col)
+		tok = newToken(token.LPAREN, l.ch, l.line, currCol)
 	case ')':
-		tok = newToken(token.RPAREN, l.ch, l.line, l.col)
+		tok = newToken(token.RPAREN, l.ch, l.line, currCol)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -74,13 +75,17 @@ func (l *Lexer) NextToken() token.Token {
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
+			tok.Col = currCol
+			tok.Line = l.line
 			return tok
 		} else if isDigit(l.ch) {
 			tok.Type = token.INT
 			tok.Literal = l.readNumber()
+			tok.Col = currCol
+			tok.Line = l.line
 			return tok
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch, l.line, l.col)
+			tok = newToken(token.ILLEGAL, l.ch, l.line, currCol)
 		}
 	}
 
@@ -92,6 +97,7 @@ func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		if l.ch == '\n' {
 			l.line += 1
+			l.col = -1
 		}
 		l.readChar()
 	}

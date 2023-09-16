@@ -134,12 +134,21 @@ func TestTokenFilePosition(t *testing.T) {
 		expectedPositions []expectedPosition
 	}{
 		{
-			"let a",
-			[]expectedPosition{{0, 0}, {0, 5}},
+			"let a = 5",
+			[]expectedPosition{{0, 0}, {0, 4}, {0, 6}, {0, 8}},
+		},
+		{
+			`let a = 5
+let b = 5
+			`,
+			[]expectedPosition{
+				{0, 0}, {0, 4}, {0, 6}, {0, 8},
+				{1, 0}, {1, 4}, {1, 6}, {1, 8},
+			},
 		},
 	}
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		l := New(tt.input)
 
 		for idx, tok := 0, l.NextToken(); tok.Type != token.EOF; idx, tok = idx+1, l.NextToken() {
@@ -147,10 +156,10 @@ func TestTokenFilePosition(t *testing.T) {
 			line := tok.Line
 			expectedPositions := tt.expectedPositions[idx]
 			if col != tt.expectedPositions[idx].col {
-				t.Fatalf("tests[%d] - col wrong. expected=%d, got=%d", idx, expectedPositions.col, col)
+				t.Fatalf("tests[%d] - col wrong. expected=%d, got=%d", i, expectedPositions.col, col)
 			}
 			if line != tt.expectedPositions[idx].line {
-				t.Fatalf("tests[%d] - line wrong. expected=%d, got=%d", idx, expectedPositions.line, line)
+				t.Fatalf("tests[%d] - line wrong. expected=%d, got=%d", i, expectedPositions.line, line)
 			}
 
 		}
