@@ -1,6 +1,7 @@
 module wasm
 
-require monkey v0.0.0
+require  monkey v0.0.0
+     
 
 replace monkey  => ../interpreter/src/monkey/
 
