@@ -141,6 +141,7 @@ func StartStream(in chan string, out chan string) {
 		}
 		line := scanner.Text()
 		if line == "exit()" {
+			out <- "Exited monkey repl"
 			return
 		}
 		l := lexer.New(line)

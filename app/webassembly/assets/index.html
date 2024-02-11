@@ -22,6 +22,24 @@
 
 	</head>
 
-	<body></body>
+	<body>
+		
+		<form onsubmit="return false">
+			<input id="codeinput" name="codeinput" type="text" /><br />
+			<input type="submit" onclick="json(codeinput.value)"/>
+		</form>
+
+         <textarea id="codeoutput" name="codeoutput" cols="80" rows="20"></textarea>
+	</body>
+	<script>
+
+        var json = function(input) {
+
+            codeoutput.value = runREPL(input)
+			codeinput.value = ""
+
+        }
+
+     </script>
 
 </html>
