@@ -2,6 +2,7 @@ package repl
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"monkey/compiler"
@@ -106,5 +107,64 @@ func StartVM(in io.Reader, out io.Writer) {
 		stackTop := machine.LastPoppedStackElem()
 		io.WriteString(out, stackTop.Inspect())
 		io.WriteString(out, "\n")
+	}
+}
+
+func sendErrors(ch chan<- string, errors []string) {
+	message := MONKEY_FACE
+	message += "Woops! We ran into some monkey business here!\n"
+	message += " parser errors:\n"
+	for _, e := range errors {
+		message += "\t" + e + "\n"
+	}
+	ch <- message
+}
+
+func StartStream(in chan string, out chan string) {
+	constants := []object.Object{}
+	globals := make([]object.Object, vm.GlobalsSize)
+	symbolTable := compiler.NewSymbolTable()
+
+	for i, v := range object.Builtins {
+		symbolTable.DefineBuiltin(i, v.Name)
+	}
+	for {
+		var b bytes.Buffer
+		b.WriteString(<-in)
+		scanner := bufio.NewScanner(bytes.NewBuffer(b.Bytes()))
+		scanned := scanner.Scan()
+		if !scanned {
+			return
+		}
+		line := scanner.Text()
+		l := lexer.New(line)
+		p := parser.New(l)
+		program := p.ParseProgram()
+		if len(p.Errors()) != 0 {
+			sendErrors(out, p.Errors())
+			continue
+		}
+		comp := compiler.NewWithState(symbolTable, constants)
+		err := comp.Compile(program)
+		if err != nil {
+			// fmt.Fprintf(out, "Woops! Compilation failed:\n %s\n", err)
+			out <- fmt.Sprintf("Woops! Compilation failed:\n %s\n", err)
+			continue
+		}
+
+		code := comp.Bytecode()
+		constants = code.Constants
+
+		machine := vm.NewWithGlobalStore(code, globals)
+		err = machine.Run()
+		if err != nil {
+			// fmt.Fprintf(out, "Woops! Executing bytecode failed:\n %s\n", err)
+			out <- fmt.Sprintf("Woops! Executing bytecode failed:\n %s\n", err)
+			continue
+		}
+		stackTop := machine.LastPoppedStackElem()
+		// io.WriteString(out, stackTop.Inspect())
+		// io.WriteString(out, "\n")
+		out <- (stackTop.Inspect() + "\n")
 	}
 }
