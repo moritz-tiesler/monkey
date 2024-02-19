@@ -338,7 +338,7 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 
 func (p *Parser) parseMethodCallExpression(firstArg ast.Expression) ast.Expression {
 	p.nextToken()
-	methodCall := p.parseExpression(LOWEST)
+	methodCall := p.parseExpression(METHOD)
 	call := methodCall.(*ast.CallExpression)
 	call.Arguments = append([]ast.Expression{firstArg}, call.Arguments...)
 
@@ -487,6 +487,7 @@ const (
 	SUM
 	PRODUCT
 	PREFIX
+	METHOD
 	CALL
 	INDEX // array[index]
 )
@@ -500,8 +501,8 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
+	token.PERIOD:   METHOD,
 	token.LPAREN:   CALL,
-	token.PERIOD:   CALL,
 	token.LBRACKET: INDEX,
 }
 

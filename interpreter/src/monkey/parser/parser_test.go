@@ -450,6 +450,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"add(a * b[2], b[1], 2 * [1, 2][1])",
 			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
 		},
+		{
+			"5.add(4, 3)",
+			"add(5, 4, 3)",
+		},
+		{
+			"1.add(2).add(3)",
+			"add(add(1, 2), 3)",
+		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)

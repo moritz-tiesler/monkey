@@ -319,6 +319,32 @@ func TestFunctionApplication(t *testing.T) {
 		testIntegerObject(t, testEval(tt.input), tt.expected)
 	}
 }
+func TestClosures(t *testing.T) {
+	input := `
+	let newAdder = fn(x) {
+	fn(y) { x + y };
+	};
+	let addTwo = newAdder(2);
+	addTwo(2);`
+	testIntegerObject(t, testEval(input), 4)
+}
+
+func TestMethodCallApplication(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let identity = fn(x) { x; }; 5.identity();", 5},
+		{"let identity = fn(x) { return x; }; 5.identity();", 5},
+		{"let double = fn(x) { x * 2; }; 5.double();", 10},
+		{"let add = fn(x, y) { x + y; }; 5.add(5);", 10},
+		{"let add = fn(x, y) { x + y; }; 5.add(5).add(5)", 15},
+		{"fn(x) { x; }(5)", 5},
+	}
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}
 
 func TestStringLiteral(t *testing.T) {
 	input := `"Hello World!"`
