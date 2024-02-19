@@ -29,7 +29,17 @@ const (
 	HASH_OBJ = "HASH"
 
 	CLOSURE_OBJ = "CLOSURE"
+	QUOTE_OBJ   = "QUOTE"
 )
+
+type Quote struct {
+	Node ast.Node
+}
+
+func (q *Quote) Type() ObjectType { return QUOTE_OBJ }
+func (q *Quote) Inspect() string {
+	return "QUOTE(" + q.Node.String() + ")"
+}
 
 type Closure struct {
 	Fn   *CompiledFunction
