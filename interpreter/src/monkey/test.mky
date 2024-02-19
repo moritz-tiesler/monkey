@@ -1,0 +1,60 @@
+let map = fn(arr, f) {
+	let iter = fn(arr, accumulated) {
+		if (len(arr) == 0) {
+			accumulated
+		} else {
+			iter(rest(arr), push(accumulated, f(first(arr))));
+		}
+	};
+	iter(arr, []);
+};
+
+let filter = fn(arr, p) {
+	let iter = fn(arr, acc) {
+		if (len(arr) == 0) {
+			return acc;
+		} else {
+			if (p(first(arr))) {
+				iter(rest(arr), push(acc, first(arr)));
+			} else {
+				iter(rest(arr), acc);
+			}
+		}
+	};
+	iter(arr, []);
+};
+
+let reduce = fn(arr, initial, f) {
+	let iter = fn(arr, result) {
+		if (len(arr) == 0) {
+			result
+		} else {
+			iter(rest(arr), f(result, first(arr)));
+		}
+	}
+	iter(arr, initial);
+};
+
+
+let accumulate = fn(arr, initial, f) {
+	let iter = fn(arr, current, acc) {
+		if (len(arr) == 0) {
+			acc
+		} else {
+			let computed = f(current, first(arr));
+			iter(rest(arr), computed, push(acc, computed));
+		}
+	};
+	iter(arr, initial, []);
+};
+		
+
+
+let double = fn(a) {2*a};
+let res = [1, 2, 3]
+	.map(fn(x) {2*x})
+	.filter(fn(i) {i>3})
+	.accumulate(50, fn(a,b) {a+b})
+	.reduce(0, fn(a,b){a+b});
+
+puts(res)
