@@ -705,6 +705,44 @@ func TestCallExpressionParsing(t *testing.T) {
 	testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
 }
 
+func TestMethodCallExpressionParsing(t *testing.T) {
+	input := "[1, 2, 3].sum(1, 2)"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("stmt is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CallExpression. got=%T",
+			stmt.Expression)
+	}
+	if !testIdentifier(t, exp.Function, "sum") {
+		return
+	}
+	if len(exp.Arguments) != 3 {
+		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
+	}
+	arr, ok := exp.Arguments[0].(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("first argument not ast.ArrayLiteral. got=%T", exp.Arguments[0])
+	}
+
+	testLiteralExpression(t, arr.Elements[0], 1)
+	testLiteralExpression(t, arr.Elements[1], 2)
+	testLiteralExpression(t, arr.Elements[2], 3)
+
+	testLiteralExpression(t, exp.Arguments[1], 1)
+	testLiteralExpression(t, exp.Arguments[2], 2)
+}
 func TestStringLiteralExpression(t *testing.T) {
 	input := `"hello world";`
 

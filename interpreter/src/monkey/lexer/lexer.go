@@ -74,9 +74,12 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LBRACKET, l.ch, l.line, currCol)
 	case ']':
 		tok = newToken(token.RBRACKET, l.ch, l.line, currCol)
+	case '.':
+		tok = newToken(token.PERIOD, l.ch, l.line, currCol)
 	case '"':
 		tok.Type = token.STRING
 		tok.Literal = l.readString()
+
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
