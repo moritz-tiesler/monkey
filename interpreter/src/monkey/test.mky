@@ -58,3 +58,11 @@ let res = [1, 2, 3]
 	.reduce(0, fn(a,b){a+b});
 
 puts(res)
+
+let adder = fn(a) {
+	return fn(b) { a + b };
+};
+
+let addFiveTo = adder(5);
+puts(addFiveTo(1));
+puts(1.addFiveTo());
