@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"monkey/compiler"
 	"monkey/evaluator"
 	"monkey/lexer"
 	"monkey/object"
 	"monkey/parser"
 	"monkey/repl"
+	"monkey/vm"
 	"os"
 	"os/user"
 )
@@ -28,8 +30,18 @@ func main() {
 		if err != nil {
 			println(fmt.Sprintf("Could not read file %s", filePath))
 		}
-		output := interpretProgamm(string(file))
-		println(output)
+		switch *compilePtr {
+		case true:
+			err = compileProgram(string(file))
+			if err != nil {
+				fmt.Println(err)
+			}
+		case false:
+			err = interpretProgamm(string(file))
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
 		return
 	}
 
@@ -44,17 +56,63 @@ func main() {
 	}
 }
 
-func interpretProgamm(code string) string {
+func interpretProgamm(code string) error {
 	env := object.NewEnvironment()
 	l := lexer.New(code)
 	p := parser.New(l)
 
 	program := p.ParseProgram()
+	if len(p.Errors()) != 0 {
+		for _, e := range p.Errors() {
+			fmt.Println(e)
+		}
+		return fmt.Errorf("exited with parser error")
+	}
 
 	evaluated := evaluator.Eval(program, env)
 
-	return evaluated.Inspect()
+	if evalError, ok := evaluated.(*object.Error); ok {
+		fmt.Printf("Woops! Evaluation failed:\n %s\n", evalError.Inspect())
+		return fmt.Errorf("exited with evaluation error")
+	}
 
+	return nil
+}
+
+func compileProgram(sourceCode string) error {
+
+	constants := []object.Object{}
+	globals := make([]object.Object, vm.GlobalsSize)
+	symbolTable := compiler.NewSymbolTable()
+
+	for i, v := range object.Builtins {
+		symbolTable.DefineBuiltin(i, v.Name)
+	}
+	l := lexer.New(sourceCode)
+	p := parser.New(l)
+	program := p.ParseProgram()
+	if len(p.Errors()) != 0 {
+		for _, e := range p.Errors() {
+			println(e)
+		}
+		return fmt.Errorf("exited with parser errors")
+	}
+	comp := compiler.NewWithState(symbolTable, constants)
+	err := comp.Compile(program)
+	if err != nil {
+		fmt.Printf("Woops! Compilation failed:\n %s\n", err)
+		return fmt.Errorf("exited with compiler error")
+	}
+
+	code := comp.Bytecode()
+
+	machine := vm.NewWithGlobalStore(code, globals)
+	err = machine.Run()
+	if err != nil {
+		fmt.Printf("Woops! Executing bytecode failed:\n %s\n", err)
+		return fmt.Errorf("exited with vm error")
+	}
+	return nil
 }
 
 func replMessage() {
