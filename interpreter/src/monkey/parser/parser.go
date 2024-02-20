@@ -341,7 +341,12 @@ func (p *Parser) parseMethodCallExpression(firstArg ast.Expression) ast.Expressi
 		return nil
 	}
 	methodCall := p.parseExpression(METHOD)
-	call := methodCall.(*ast.CallExpression)
+	call, ok := methodCall.(*ast.CallExpression)
+	if !ok {
+		msg := fmt.Sprintf("Not a function call %s", methodCall.String())
+		p.errors = append(p.errors, msg)
+		return nil
+	}
 	call.Arguments = append([]ast.Expression{firstArg}, call.Arguments...)
 
 	return call
