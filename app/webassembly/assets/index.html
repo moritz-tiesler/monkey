@@ -1,45 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
 
-<html>
-
-	<head>
-
-		<meta charset="utf-8"/>
-
-		<script src="wasm_exec.js"></script>
-
-		<script>
-
-			const go = new Go();
-
-			WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
-
-				go.run(result.instance);
-
-			});
-
-		</script>
-
-	</head>
-
-	<body>
-		
-		<form onsubmit="return false">
-			<input id="codeinput" name="codeinput" type="text" /><br />
-			<input type="submit" onclick="json(codeinput.value)"/>
-		</form>
-
-         <textarea id="codeoutput" name="codeoutput" cols="80" rows="20"></textarea>
-	</body>
-	<script>
-
-        var json = function(input) {
-
-            codeoutput.value = runREPL(input)
-			codeinput.value = ""
-
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Editor</title>
+    <style type="text/css" media="screen">
+        body {
+            overflow: hidden;
         }
 
-     </script>
+        #editor {
+            margin: 0;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <pre id="editor">function foo(items) {
+        var i;
+        for (i = 0; i &lt; items.length; i++) {
+            alert("Ace Rocks " + items[i]);
+        }
+    }</pre>
+    <div id="output">I will display the results</div>
+
+    <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+    <script>
+        var editor = ace.edit("editor");
+        editor.setTheme("ace/theme/twilight");
+        editor.session.setMode("ace/mode/javascript");
+        editor.setOption("keyboardHandler", "ace/keyboard/vim")
+        editor.commands.addCommand({
+            name: 'sendCode',
+            bindKey: {win: 'Shift-Enter'},
+            exec: function(editor) {
+                console.log("SEND DA CODE")
+            },
+        });
+    </script>
+
+</body>
 
 </html>
