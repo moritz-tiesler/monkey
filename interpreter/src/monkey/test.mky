@@ -65,3 +65,6 @@ let adder = fn(a) {
 
 let addFiveTo = adder(5);
 puts(5);
+
+let seven = 5.(fn(a) {a+2})()
+puts(seven)

@@ -751,6 +751,44 @@ func TestMethodCallExpressionParsing(t *testing.T) {
 	testLiteralExpression(t, exp.Arguments[1], 1)
 	testLiteralExpression(t, exp.Arguments[2], 2)
 }
+
+func TestMethodCallExpressionParsingWithFunctionLiteral(t *testing.T) {
+	input := "5.(fn(i) {i+2})()"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("stmt is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CallExpression. got=%T",
+			stmt.Expression)
+	}
+	funcLit, ok := exp.Function.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("exp.Function is not ast.FunctionLiteral. got=%T",
+			funcLit)
+	}
+
+	if len(exp.Arguments) != 1 {
+		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
+	}
+	integer, ok := exp.Arguments[0].(*ast.IntegerLiteral)
+	if !ok {
+		t.Fatalf("first argument not ast.ArrayLiteral. got=%T", exp.Arguments[0])
+	}
+
+	testLiteralExpression(t, integer, 5)
+}
+
 func TestStringLiteralExpression(t *testing.T) {
 	input := `"hello world";`
 

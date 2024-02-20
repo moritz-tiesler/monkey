@@ -340,6 +340,8 @@ func TestMethodCallApplication(t *testing.T) {
 		{"let add = fn(x, y) { x + y; }; 5.add(5);", 10},
 		{"let add = fn(x, y) { x + y; }; 5.add(5).add(5)", 15},
 		{"fn(x) { x; }(5)", 5},
+		{"5.(fn(i) {i+2})()", 7},
+		{"5.(fn(i) {i+2})().(fn(i){i+2})()", 9},
 	}
 	for _, tt := range tests {
 		testIntegerObject(t, testEval(tt.input), tt.expected)

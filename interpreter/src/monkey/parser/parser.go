@@ -337,7 +337,9 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseMethodCallExpression(firstArg ast.Expression) ast.Expression {
-	p.nextToken()
+	if !p.expectPeekOneOf(token.IDENT, token.LPAREN) {
+		return nil
+	}
 	methodCall := p.parseExpression(METHOD)
 	call := methodCall.(*ast.CallExpression)
 	call.Arguments = append([]ast.Expression{firstArg}, call.Arguments...)
@@ -463,6 +465,17 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 	}
 }
 
+func (p *Parser) expectPeekOneOf(ts ...token.TokenType) bool {
+	for _, t := range ts {
+		if p.peekTokenIs(t) {
+			p.nextToken()
+			return true
+		}
+	}
+	p.peekError(ts...)
+	return false
+}
+
 func (p *Parser) peekPrecedence() int {
 	if p, ok := precedences[p.peekToken.Type]; ok {
 		return p
@@ -510,7 +523,7 @@ func (p *Parser) Errors() []string {
 	return p.errors
 }
 
-func (p *Parser) peekError(t token.TokenType) {
+func (p *Parser) peekError(t ...token.TokenType) {
 	msg := fmt.Sprintf("Error at line %d col %d, expected next token to be %s, got %s instead",
 		p.peekToken.Line, p.peekToken.Col, t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
