@@ -7,7 +7,14 @@
     <title>Editor</title>
     <style type="text/css" media="screen">
         body {
-            overflow: hidden;
+            overflow: auto;
+            background-color: #141414;
+        }
+        
+        #container {
+            display: flex;
+            justify-content: flex-end;
+            overflow: auto;
         }
 
         #editor {
@@ -17,20 +24,30 @@
             bottom: 0;
             left: 0;
             right: 0;
+            width: 50%;
+        }
+        
+        #output {
+            width: 50%;
+            white-space: pre-wrap;
+            color: grey;
+            font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+            overflow: auto;
+            
         }
     </style>
 </head>
 
 <body>
-
-    <pre id="editor">function foo(items) {
+    <div id="container">
+        <pre id="editor">function foo(items) {
         var i;
         for (i = 0; i &lt; items.length; i++) {
             alert("Ace Rocks " + items[i]);
         }
     }</pre>
-    <div id="output">I will display the results</div>
-
+        <div id="output"></div>
+    </div>
     <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
         var editor = ace.edit("editor");
@@ -39,9 +56,12 @@
         editor.setOption("keyboardHandler", "ace/keyboard/vim")
         editor.commands.addCommand({
             name: 'sendCode',
-            bindKey: {win: 'Shift-Enter'},
-            exec: function(editor) {
+            bindKey: { win: 'Shift-Enter' },
+            exec: function (editor) {
                 console.log("SEND DA CODE")
+                let code = editor.getValue();
+                let target = document.getElementById("output");
+                target.innerHTML = target.innerHTML + code + "\n"; 
             },
         });
     </script>
