@@ -2,6 +2,18 @@
 <html lang="en">
 
 <head>
+    <script src="wasm_exec.js"></script>
+    <script>
+
+        const go = new Go();
+
+        WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
+
+            go.run(result.instance);
+
+        });
+
+    </script>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <title>Editor</title>
@@ -41,21 +53,21 @@
 <body>
     <div id="container">
         <pre id="editor">
-        let map = fn(arr, func) {
-            let iter = fn(arr, acc) {
-                if (len(arr) == 0) {
-                    return acc;
-                } else {
-                    iter(rest(arr), push(acc, func(first(arr))));
-                }
-            }
-            iter(arr, []);
+let map = fn(arr, func) {
+    let iter = fn(arr, acc) {
+        if (len(arr) == 0) {
+            return acc;
+        } else {
+            iter(rest(arr), push(acc, func(first(arr))));
         }
-        
-        let double = fn(x) {2*x};
-        
-        let computed = [1, 2, 3].map(double);
-        puts(computed);
+    };
+    iter(arr, []);
+};
+
+let double = fn(x) {2*x};
+
+let computed = [1, 2, 3].map(double);
+computed;
 </pre>
         <div id="output"></div>
     </div>
@@ -70,7 +82,7 @@
             bindKey: { win: 'Shift-Enter' },
             exec: function (editor) {
                 console.log("SEND DA CODE")
-                let code = editor.getValue();
+                let code = editor.getValue().replaceAll(/[\n\t]/g, "")
                 let target = document.getElementById("output");
                 let res = runREPL(code);
                 target.innerHTML = target.innerHTML + res;
@@ -78,29 +90,7 @@
             },
         });
     </script>
-    <script src="wasm_exec.js"></script>
 
-    <script>
-
-        const go = new Go();
-
-        WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
-
-            go.run(result.instance);
-
-        });
-
-    </script>
-    <script>
-
-        var eval = function (input) {
-
-            codeoutput.value = runREPL(input)
-            codeinput.value = ""
-
-        }
-
-    </script>
 
 </body>
 
