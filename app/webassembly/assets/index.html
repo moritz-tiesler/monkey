@@ -20,7 +20,7 @@
     <style type="text/css" media="screen">
         body {
             overflow: auto;
-            background-color: #141414;
+            background-color: #1e133a;
         }
 
         #container {
@@ -47,6 +47,9 @@
             overflow: auto;
 
         }
+        #output {
+            padding-left: 10px;
+        }
     </style>
 </head>
 
@@ -69,16 +72,15 @@ let double = fn(x) {2*x};
 let computed = [1, 2, 3].map(double);
 computed;
 </pre>
-        <div id="output-container">
-            <div id="output"></div>
-        </div>
+        <div id="output-container"><div id="output"></div></div>
     </div>
     <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
         var editor = ace.edit("editor");
         editor.setTheme("ace/theme/twilight");
         editor.session.setMode("ace/mode/javascript");
-        editor.setOption("keyboardHandler", "ace/keyboard/vim")
+        editor.setOption("keyboardHandler", "ace/keyboard/vim");
+        editor.setOption("showPrintMargin", false);
         editor.commands.addCommand({
             name: 'sendCode',
             bindKey: { win: 'Shift-Enter' },
