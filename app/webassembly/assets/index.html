@@ -39,7 +39,7 @@
             width: 50%;
         }
 
-        #output {
+        #output-container {
             width: 50%;
             white-space: pre-wrap;
             color: grey;
@@ -69,7 +69,9 @@ let double = fn(x) {2*x};
 let computed = [1, 2, 3].map(double);
 computed;
 </pre>
-        <div id="output"></div>
+        <div id="output-container">
+            <div id="output"></div>
+        </div>
     </div>
     <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
@@ -82,7 +84,7 @@ computed;
             bindKey: { win: 'Shift-Enter' },
             exec: function (editor) {
                 console.log("SEND DA CODE")
-                let code = editor.getValue().replaceAll(/[\n\t]/g, "")
+                let code = editor.getValue().replaceAll("\n", "");
                 let target = document.getElementById("output");
                 let res = runREPL(code);
                 target.innerHTML = target.innerHTML + res;
