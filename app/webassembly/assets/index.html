@@ -7,7 +7,7 @@
 
         const go = new Go();
 
-        WebAssembly.instantiateStreaming(fetch("json.wasm"), go.importObject).then((result) => {
+        WebAssembly.instantiateStreaming(fetch("repl.wasm"), go.importObject).then((result) => {
 
             go.run(result.instance);
 
@@ -20,7 +20,7 @@
     <style type="text/css" media="screen">
         body {
             overflow: auto;
-            background-color: #1e133a;
+            background-color:#011526;
         }
 
         #container {
@@ -41,14 +41,26 @@
 
         #output-container {
             width: 50%;
-            white-space: pre-wrap;
             color: grey;
             font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
             overflow: auto;
 
         }
+
         #output {
+            white-space: pre-wrap;
             padding-left: 10px;
+        }
+
+        #menu {
+            padding-left: 10px;
+        }
+        .menu-button{
+            background-color: transparent;
+            font: 12px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'Source Code Pro', 'source-code-pro', monospace;
+            color: grey;
+            border: 0px;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -56,29 +68,29 @@
 <body>
     <div id="container">
         <pre id="editor">
-let map = fn(arr, func) {
-    let iter = fn(arr, acc) {
-        if (len(arr) == 0) {
-            return acc;
-        } else {
-            iter(rest(arr), push(acc, func(first(arr))));
-        }
-    };
-    iter(arr, []);
-};
-
-let double = fn(x) {2*x};
-
-let computed = [1, 2, 3].map(double);
-computed;
+let a = 4 * 4 - 1;
+a;
 </pre>
-        <div id="output-container"><div id="output"></div></div>
+        <div id="output-container">
+            <table id="menu">
+                <tr><td><a href="https://monkeylang.org/" target="_blank"> >> The Monkey Language </a></td></tr>
+                <tr><td><a href="https://en.wikipedia.org/wiki/Uniform_Function_Call_Syntax" target="_blank"> >> This implementation supports UFCS</a></td></tr>
+                <tr><td><a href="https://github.com/ajaxorg/ace" target="_blank"> >> Ace (Ajax.org Cloud9 Editor)</a></td></tr>
+                <tr><td>Test some snippets:</td></tr>
+                <tr><td><button class="menu-button" onclick="insertSnippet(mapSnippet)"><- map</button></td></tr>
+                <tr><td><button class="menu-button" onclick="insertSnippet(filterSnippet)"><- filter</button></td></tr>
+                <tr><td><button class="menu-button" onclick="insertSnippet(reduceSnippet)"><- reduce</button></td></tr>
+                <tr><td>--------------------------------------</td></tr>
+                <tr><td>Press Shift+Enter to run</td></tr>
+            </table>
+            <div id="output"></div>
+        </div>
     </div>
     <script src="src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
     <script>
         var editor = ace.edit("editor");
-        editor.setTheme("ace/theme/twilight");
-        editor.session.setMode("ace/mode/javascript");
+        editor.setTheme("ace/theme/cobalt");
+        editor.session.setMode("ace/mode/rust");
         editor.setOption("keyboardHandler", "ace/keyboard/vim");
         editor.setOption("showPrintMargin", false);
         editor.commands.addCommand({
@@ -89,10 +101,64 @@ computed;
                 let code = editor.getValue().replaceAll("\n", "");
                 let target = document.getElementById("output");
                 let res = runREPL(code);
-                target.innerHTML = target.innerHTML + res;
+                target.innerHTML = target.innerHTML + formatOutput(res);
                 target.scrollIntoView(false);
             },
         });
+        var insertSnippet = function (snippet) {
+            let currCursor = editor.selection.getCursor();
+            let currLine = currCursor.row;
+            let currCol = currCursor.column;
+            editor.gotoLine(currLine+2);
+            editor.insert(snippet);
+        }
+        var formatOutput = function(result) {
+            return ">> " + result;
+        }
+        var mapSnippet = `let map = fn(arr, func) {
+    let iter = fn(arr, acc) {
+        if (len(arr) == 0) {
+            return acc;
+        } else {
+            iter(rest(arr), push(acc, func(first(arr))));
+        }
+    };
+    iter(arr, []);
+};
+let mapped = [1, 2, 3].map(fn(x) {2*x})
+mapped;
+`;
+        var filterSnippet = `let filter = fn(arr, p) {
+    let iter = fn(arr, acc) {
+            if (len(arr) == 0) {
+                    return acc;
+            } else {
+                    if (p(first(arr))) {
+                            iter(rest(arr), push(acc, first(arr)));
+                    } else {
+                            iter(rest(arr), acc);
+                    }
+            }
+    };
+    iter(arr, []);
+}; 
+let filtered = [1, 2, 3].filter(fn(x) {x<3});
+filtered;
+`;
+        var reduceSnippet = `let reduce = fn(arr, initial, f) {
+    let iter = fn(arr, result) {
+            if (len(arr) == 0) {
+                    result
+            } else {
+                    iter(rest(arr), f(result, first(arr)));
+            }
+    }
+    iter(arr, initial);
+};
+let reduced = [1, 2, 3].reduce(0, fn(a,b) {a+b});
+reduced;
+`;
+
     </script>
 
 
