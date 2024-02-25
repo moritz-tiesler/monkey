@@ -15,8 +15,8 @@ func replWrapper() js.Func {
 		repl.StartStream(in, out)
 		close(out)
 	}()
-
-	jsonFunc := js.FuncOf(func(this js.Value, args []js.Value) any {
+	var jsonFunc js.Func
+	jsonFunc = js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) != 1 {
 			return "Invalid no of arguments passed"
 		}
@@ -28,6 +28,7 @@ func replWrapper() js.Func {
 		}()
 
 		res := <-out
+		jsonFunc.Release()
 		return res
 
 	})
