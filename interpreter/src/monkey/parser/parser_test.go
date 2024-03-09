@@ -14,9 +14,24 @@ func TestLetStatements(t *testing.T) {
 		expectedValue      interface{}
 		expectedPos        ast.NodeRange
 	}{
-		{"let x = 5;", "x", 5, ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{0, 9}}},
-		//{"let y = true;", "y", true},
-		//{"let foobar = y;", "foobar", "y"},
+		{
+			"let x = 5;",
+			"x",
+			5,
+			ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{Line: 0, Col: 9}},
+		},
+		{
+			"let y = true;",
+			"y",
+			true,
+			ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{Line: 0, Col: 12}},
+		},
+		{
+			"let foobar = y;",
+			"foobar",
+			"y",
+			ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{Line: 0, Col: 14}},
+		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -85,10 +100,11 @@ func TestReturnStatements(t *testing.T) {
 	tests := []struct {
 		input         string
 		expectedValue interface{}
+		expectedRange ast.NodeRange
 	}{
-		{"return 5;", 5},
-		{"return true;", true},
-		{"return foobar;", "foobar"},
+		{"return 5;", 5, ast.NodeRange{Start: ast.Position{Line: 0, Col: 0}, End: ast.Position{Line: 0, Col: 8}}},
+		{"return true;", true, ast.NodeRange{Start: ast.Position{Line: 0, Col: 0}, End: ast.Position{Line: 0, Col: 11}}},
+		{"return foobar;", "foobar", ast.NodeRange{Start: ast.Position{Line: 0, Col: 0}, End: ast.Position{Line: 0, Col: 13}}},
 	}
 
 	for _, tt := range tests {
@@ -1043,5 +1059,125 @@ func TestFunctionLiteralWithName(t *testing.T) {
 	if function.Name != "myFunction" {
 		t.Fatalf("function literal name wrong. want 'myFunction', got=%q\n",
 			function.Name)
+	}
+}
+
+func TestLetStatementRanges(t *testing.T) {
+	tests := []struct {
+		input                 string
+		expectedPos           ast.NodeRange
+		expectedPosIdentifier ast.NodeRange
+		expectedPosValue      ast.NodeRange
+	}{
+		{
+			"let x = 5;",
+			ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{Line: 0, Col: 9}},
+			ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{Line: 0, Col: 5}},
+			ast.NodeRange{Start: ast.Position{Line: 0, Col: 8}, End: ast.Position{Line: 0, Col: 9}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0]
+		r := stmt.Range()
+		start := r.Start
+		end := r.End
+		if start != tt.expectedPos.Start {
+			t.Fatalf("wrong range start: expected=%v, got=%v", tt.expectedPos.Start, start)
+		}
+		if end != tt.expectedPos.End {
+			t.Fatalf("wrong range end: expected=%v, got=%v", tt.expectedPos.End, end)
+		}
+
+		letStatement := stmt.(*ast.LetStatement)
+		identifier := letStatement.Name
+		value := letStatement.Value
+
+		testNodeRange(t, tt.expectedPosIdentifier, identifier.Range())
+		testNodeRange(t, tt.expectedPosValue, value.Range())
+
+	}
+}
+
+func testNodeRange(t *testing.T, expected ast.NodeRange, actual ast.NodeRange) bool {
+	if expected.Start != actual.Start {
+		t.Errorf("wrong range start: expected=%v, got=%v", expected.Start, actual.Start)
+		return false
+	}
+	if expected.End != actual.End {
+		t.Errorf("wrong range end: expected=%v, got=%v", expected.End, actual.End)
+		return false
+	}
+	return true
+}
+
+func TestIfStatemtentRanges(t *testing.T) {
+	tests := []struct {
+		input                  string
+		expectedPos            ast.NodeRange
+		expectedConditionPos   ast.NodeRange
+		expectedConsequencePos ast.NodeRange
+		expectedAlternativePos ast.NodeRange
+	}{
+		{
+			`
+if (a == true) {
+	a
+}else {
+	b
+}`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 4}, End: ast.Position{Line: 4, Col: 2}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 4}, End: ast.Position{Line: 1, Col: 13}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 2}},
+			ast.NodeRange{Start: ast.Position{Line: 4, Col: 1}, End: ast.Position{Line: 4, Col: 2}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+		r := stmt.Range()
+		start := r.Start
+		end := r.End
+		if start != tt.expectedPos.Start {
+			t.Fatalf("wrong range start: expected=%v, got=%v", tt.expectedPos.Start, start)
+		}
+		if end != tt.expectedPos.End {
+			t.Fatalf("wrong range end: expected=%v, got=%v", tt.expectedPos.End, end)
+		}
+
+		ie := stmt.Expression.(*ast.IfExpression)
+		cond := ie.Condition
+		cons := ie.Consequence
+		alt := ie.Alternative
+
+		if ok := testNodeRange(t, tt.expectedPos, ie.Range()); !ok {
+			t.Errorf("wrong range for If-Expresssion")
+		}
+
+		if ok := testNodeRange(t, tt.expectedConditionPos, cond.Range()); !ok {
+			t.Errorf("wrong range for Condition")
+		}
+		if ok := testNodeRange(t, tt.expectedConsequencePos, cons.Range()); !ok {
+			t.Errorf("wrong range for Consequence")
+		}
+		if ok := testNodeRange(t, tt.expectedAlternativePos, alt.Range()); !ok {
+			t.Errorf("wrong range for Alternative")
+		}
+
 	}
 }
