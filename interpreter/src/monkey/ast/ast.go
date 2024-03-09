@@ -7,9 +7,20 @@ import (
 	"strings"
 )
 
+type Position struct {
+	Line int
+	Col  int
+}
+
+type NodeRange struct {
+	Start Position
+	End   Position
+}
+
 type Node interface {
 	TokenLiteral() string
 	String() string
+	Range() NodeRange
 }
 
 type Statement interface {
@@ -50,6 +61,14 @@ func (fl *FunctionLiteral) String() string {
 
 	return out.String()
 }
+func (fl *FunctionLiteral) Range() NodeRange {
+	firstParam := fl.Parameters[0]
+	finalStatement := fl.Body.Statements[len(fl.Body.Statements)-1]
+	return NodeRange{
+		Start: Position{firstParam.Range().Start.Line, firstParam.Range().Start.Col},
+		End:   Position{finalStatement.Range().End.Line, finalStatement.Range().End.Col},
+	}
+}
 
 type StringLiteral struct {
 	Token token.Token
@@ -59,6 +78,12 @@ type StringLiteral struct {
 func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
 func (sl *StringLiteral) String() string       { return sl.Token.Literal }
+func (sl *StringLiteral) Range() NodeRange {
+	return NodeRange{
+		Start: Position{sl.Token.Line, sl.Token.Col},
+		End:   Position{sl.Token.Line, sl.Token.Col + len(sl.Token.Literal)},
+	}
+}
 
 type Program struct {
 	Statements []Statement
@@ -80,6 +105,14 @@ func (p *Program) String() string {
 	}
 
 	return out.String()
+}
+func (p *Program) Range() NodeRange {
+	first := p.Statements[0]
+	last := p.Statements[len(p.Statements)-1]
+	return NodeRange{
+		Start: Position{first.Range().Start.Line, first.Range().Start.Col},
+		End:   Position{last.Range().End.Line, last.Range().End.Col},
+	}
 }
 
 type LetStatement struct {
@@ -105,6 +138,12 @@ func (ls *LetStatement) String() string {
 	out.WriteString(";")
 
 	return out.String()
+}
+func (ls *LetStatement) Range() NodeRange {
+	return NodeRange{
+		Start: Position{ls.Name.Range().Start.Line, ls.Name.Range().Start.Col},
+		End:   Position{ls.Value.Range().End.Line, ls.Value.Range().End.Col},
+	}
 }
 
 func (rs *ReturnStatement) String() string {
@@ -138,6 +177,12 @@ type Identifier struct {
 func (i *Identifier) expressionNode()      {}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
 func (i *Identifier) String() string       { return i.Value }
+func (i *Identifier) Range() NodeRange {
+	return NodeRange{
+		Start: Position{i.Token.Line, i.Token.Col},
+		End:   Position{i.Token.Line, i.Token.Col + len(i.Token.Literal)},
+	}
+}
 
 type ReturnStatement struct {
 	Token       token.Token
@@ -146,6 +191,12 @@ type ReturnStatement struct {
 
 func (rs *ReturnStatement) statementNode()       {}
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
+func (rs *ReturnStatement) Range() NodeRange {
+	return NodeRange{
+		Start: Position{rs.ReturnValue.Range().Start.Line, rs.ReturnValue.Range().Start.Col},
+		End:   Position{rs.ReturnValue.Range().End.Line, rs.ReturnValue.Range().End.Col},
+	}
+}
 
 type ExpressionStatement struct {
 	Token      token.Token
@@ -154,6 +205,12 @@ type ExpressionStatement struct {
 
 func (es *ExpressionStatement) statementNode()       {}
 func (es *ExpressionStatement) TokenLiteral() string { return es.Token.Literal }
+func (es *ExpressionStatement) Range() NodeRange {
+	return NodeRange{
+		Start: Position{es.Expression.Range().Start.Line, es.Expression.Range().Start.Col},
+		End:   Position{es.Expression.Range().End.Line, es.Expression.Range().End.Col},
+	}
+}
 
 type IntegerLiteral struct {
 	Token token.Token
@@ -163,6 +220,12 @@ type IntegerLiteral struct {
 func (il *IntegerLiteral) expressionNode()      {}
 func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string       { return il.Token.Literal }
+func (il *IntegerLiteral) Range() NodeRange {
+	return NodeRange{
+		Start: Position{Line: il.Token.Line, Col: il.Token.Col},
+		End:   Position{Line: il.Token.Line, Col: il.Token.Col + len(il.Token.Literal)},
+	}
+}
 
 type Boolean struct {
 	Token token.Token
@@ -172,6 +235,12 @@ type Boolean struct {
 func (b *Boolean) expressionNode()      {}
 func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string       { return b.Token.Literal }
+func (il *Boolean) Range() NodeRange {
+	return NodeRange{
+		Start: Position{Line: il.Token.Line, Col: il.Token.Col},
+		End:   Position{Line: il.Token.Line, Col: il.Token.Col + len(il.Token.Literal)},
+	}
+}
 
 type PrefixExpression struct {
 	Token    token.Token
@@ -190,6 +259,13 @@ func (pe *PrefixExpression) String() string {
 	out.WriteString(")")
 
 	return out.String()
+}
+
+func (pe *PrefixExpression) Range() NodeRange {
+	return NodeRange{
+		Start: Position{Line: pe.Token.Line, Col: pe.Token.Col},
+		End:   Position{Line: pe.Right.Range().End.Line, Col: pe.Right.Range().End.Col},
+	}
 }
 
 type InfixExpression struct {
@@ -211,6 +287,13 @@ func (ie *InfixExpression) String() string {
 	out.WriteString(")")
 
 	return out.String()
+}
+
+func (ie *InfixExpression) Range() NodeRange {
+	return NodeRange{
+		Start: Position{Line: ie.Left.Range().Start.Line, Col: ie.Left.Range().Start.Col},
+		End:   Position{Line: ie.Right.Range().End.Line, Col: ie.Right.Range().End.Col},
+	}
 }
 
 type IfExpression struct {
@@ -235,6 +318,20 @@ func (ie *IfExpression) String() string {
 	return out.String()
 }
 
+func (ie *IfExpression) Range() NodeRange {
+	var end Position
+	if ie.Alternative != nil {
+		end = Position{ie.Alternative.Range().End.Line, ie.Alternative.Range().End.Col}
+	} else {
+		end = Position{ie.Consequence.Range().End.Line, ie.Consequence.Range().End.Col}
+	}
+
+	return NodeRange{
+		Start: Position{Line: ie.Condition.Range().Start.Line, Col: ie.Condition.Range().Start.Col},
+		End:   end,
+	}
+}
+
 type BlockStatement struct {
 	Token      token.Token
 	Statements []Statement
@@ -248,6 +345,14 @@ func (bs *BlockStatement) String() string {
 		out.WriteString(s.String())
 	}
 	return out.String()
+}
+func (bs *BlockStatement) Range() NodeRange {
+	first := bs.Statements[0]
+	last := bs.Statements[len(bs.Statements)-1]
+	return NodeRange{
+		Start: Position{first.Range().Start.Line, first.Range().Start.Col},
+		End:   Position{last.Range().End.Line, last.Range().End.Col},
+	}
 }
 
 type CallExpression struct {
@@ -273,6 +378,13 @@ func (ce *CallExpression) String() string {
 
 	return out.String()
 }
+func (ce *CallExpression) Range() NodeRange {
+	lastArg := ce.Arguments[len(ce.Arguments)-1]
+	return NodeRange{
+		Start: Position{ce.Function.Range().Start.Line, ce.Function.Range().Start.Col},
+		End:   Position{lastArg.Range().End.Line, lastArg.Range().End.Col},
+	}
+}
 
 type ArrayLiteral struct {
 	Token    token.Token
@@ -295,6 +407,14 @@ func (al *ArrayLiteral) String() string {
 
 	return out.String()
 }
+func (al *ArrayLiteral) Range() NodeRange {
+	first := al.Elements[0]
+	last := al.Elements[len(al.Elements)-1]
+	return NodeRange{
+		Start: Position{first.Range().Start.Line, first.Range().Start.Col},
+		End:   Position{last.Range().End.Line, last.Range().End.Col},
+	}
+}
 
 type HashLiteral struct {
 	Token token.Token
@@ -316,6 +436,14 @@ func (hl *HashLiteral) String() string {
 	return out.String()
 }
 
+// TODO fix this function
+func (hl *HashLiteral) Range() NodeRange {
+	return NodeRange{
+		Start: Position{-1, -1},
+		End:   Position{-1, -1},
+	}
+}
+
 type IndexExpression struct {
 	Token token.Token // The [ token
 	Left  Expression
@@ -335,4 +463,10 @@ func (ie *IndexExpression) String() string {
 
 	return out.String()
 
+}
+func (ie *IndexExpression) Range() NodeRange {
+	return NodeRange{
+		Start: Position{ie.Left.Range().Start.Line, ie.Left.Range().Start.Col},
+		End:   Position{ie.Index.Range().End.Line, ie.Index.Range().End.Col},
+	}
 }
