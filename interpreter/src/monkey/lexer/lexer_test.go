@@ -162,15 +162,15 @@ func TestTokenFilePosition(t *testing.T) {
 	}{
 		{
 			"let a = 5",
-			[]expectedPosition{{1, 1}, {1, 5}, {1, 7}, {1, 9}},
+			[]expectedPosition{{0, 0}, {0, 4}, {0, 6}, {0, 8}},
 		},
 		{
 			`let a = 5
 let b = 5
 			`,
 			[]expectedPosition{
-				{1, 1}, {1, 5}, {1, 7}, {1, 9},
-				{2, 1}, {2, 5}, {2, 7}, {2, 9},
+				{0, 0}, {0, 4}, {0, 6}, {0, 8},
+				{1, 0}, {1, 4}, {1, 6}, {1, 8},
 			},
 		},
 	}
