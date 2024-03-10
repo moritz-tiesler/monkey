@@ -38,6 +38,8 @@ type FunctionLiteral struct {
 	Parameters []*Identifier
 	Body       *BlockStatement
 	Name       string
+	Start      Position
+	End        Position
 }
 
 func (fl *FunctionLiteral) expressionNode()      {}
@@ -62,17 +64,17 @@ func (fl *FunctionLiteral) String() string {
 	return out.String()
 }
 func (fl *FunctionLiteral) Range() NodeRange {
-	firstParam := fl.Parameters[0]
-	finalStatement := fl.Body.Statements[len(fl.Body.Statements)-1]
 	return NodeRange{
-		Start: Position{firstParam.Range().Start.Line, firstParam.Range().Start.Col},
-		End:   Position{finalStatement.Range().End.Line, finalStatement.Range().End.Col},
+		Start: fl.Start,
+		End:   fl.End,
 	}
 }
 
 type StringLiteral struct {
 	Token token.Token
 	Value string
+	Start Position
+	End   Position
 }
 
 func (sl *StringLiteral) expressionNode()      {}
@@ -87,6 +89,8 @@ func (sl *StringLiteral) Range() NodeRange {
 
 type Program struct {
 	Statements []Statement
+	Start      Position
+	End        Position
 }
 
 func (p *Program) TokenLiteral() string {
@@ -119,6 +123,8 @@ type LetStatement struct {
 	Token token.Token
 	Name  *Identifier
 	Value Expression
+	Start Position
+	End   Position
 }
 
 func (ls *LetStatement) statementNode()       {}
@@ -141,8 +147,8 @@ func (ls *LetStatement) String() string {
 }
 func (ls *LetStatement) Range() NodeRange {
 	return NodeRange{
-		Start: Position{ls.Name.Range().Start.Line, ls.Name.Range().Start.Col},
-		End:   Position{ls.Value.Range().End.Line, ls.Value.Range().End.Col},
+		Start: ls.Start,
+		End:   ls.End,
 	}
 }
 
@@ -172,6 +178,8 @@ func (es *ExpressionStatement) String() string {
 type Identifier struct {
 	Token token.Token
 	Value string
+	Start Position
+	End   Position
 }
 
 func (i *Identifier) expressionNode()      {}
@@ -187,6 +195,8 @@ func (i *Identifier) Range() NodeRange {
 type ReturnStatement struct {
 	Token       token.Token
 	ReturnValue Expression
+	Start       Position
+	End         Position
 }
 
 func (rs *ReturnStatement) statementNode()       {}
@@ -201,6 +211,8 @@ func (rs *ReturnStatement) Range() NodeRange {
 type ExpressionStatement struct {
 	Token      token.Token
 	Expression Expression
+	Start      Position
+	End        Position
 }
 
 func (es *ExpressionStatement) statementNode()       {}
@@ -215,6 +227,8 @@ func (es *ExpressionStatement) Range() NodeRange {
 type IntegerLiteral struct {
 	Token token.Token
 	Value int64
+	Start Position
+	End   Position
 }
 
 func (il *IntegerLiteral) expressionNode()      {}
@@ -230,6 +244,8 @@ func (il *IntegerLiteral) Range() NodeRange {
 type Boolean struct {
 	Token token.Token
 	Value bool
+	Start Position
+	End   Position
 }
 
 func (b *Boolean) expressionNode()      {}
@@ -246,6 +262,8 @@ type PrefixExpression struct {
 	Token    token.Token
 	Operator string
 	Right    Expression
+	Start    Position
+	End      Position
 }
 
 func (pe *PrefixExpression) expressionNode()      {}
@@ -273,6 +291,8 @@ type InfixExpression struct {
 	Operator string
 	Left     Expression
 	Right    Expression
+	Start    Position
+	End      Position
 }
 
 func (ie *InfixExpression) expressionNode()      {}
@@ -301,6 +321,8 @@ type IfExpression struct {
 	Condition   Expression
 	Consequence *BlockStatement
 	Alternative *BlockStatement
+	Start       Position
+	End         Position
 }
 
 func (ie *IfExpression) expressionNode()      {}
@@ -319,22 +341,17 @@ func (ie *IfExpression) String() string {
 }
 
 func (ie *IfExpression) Range() NodeRange {
-	var end Position
-	if ie.Alternative != nil {
-		end = Position{ie.Alternative.Range().End.Line, ie.Alternative.Range().End.Col}
-	} else {
-		end = Position{ie.Consequence.Range().End.Line, ie.Consequence.Range().End.Col}
-	}
-
 	return NodeRange{
-		Start: Position{Line: ie.Condition.Range().Start.Line, Col: ie.Condition.Range().Start.Col},
-		End:   end,
+		Start: ie.Start,
+		End:   ie.End,
 	}
 }
 
 type BlockStatement struct {
 	Token      token.Token
 	Statements []Statement
+	Start      Position
+	End        Position
 }
 
 func (bs *BlockStatement) statementNode()       {}
@@ -347,11 +364,9 @@ func (bs *BlockStatement) String() string {
 	return out.String()
 }
 func (bs *BlockStatement) Range() NodeRange {
-	first := bs.Statements[0]
-	last := bs.Statements[len(bs.Statements)-1]
 	return NodeRange{
-		Start: Position{first.Range().Start.Line, first.Range().Start.Col},
-		End:   Position{last.Range().End.Line, last.Range().End.Col},
+		Start: bs.Start,
+		End:   bs.End,
 	}
 }
 
@@ -359,6 +374,8 @@ type CallExpression struct {
 	Token     token.Token
 	Function  Expression
 	Arguments []Expression
+	Start     Position
+	End       Position
 }
 
 func (ce *CallExpression) expressionNode()      {}
@@ -389,6 +406,8 @@ func (ce *CallExpression) Range() NodeRange {
 type ArrayLiteral struct {
 	Token    token.Token
 	Elements []Expression
+	Start    Position
+	End      Position
 }
 
 func (al *ArrayLiteral) expressionNode()      {}
@@ -425,6 +444,8 @@ type HashLiteral struct {
 	Token        token.Token
 	Pairs        map[Expression]Expression
 	OrderedPairs []HashPair
+	Start        Position
+	End          Position
 }
 
 func (hl *HashLiteral) expressionNode()      {}
@@ -451,6 +472,8 @@ type IndexExpression struct {
 	Token token.Token // The [ token
 	Left  Expression
 	Index Expression
+	Start Position
+	End   Position
 }
 
 func (ie *IndexExpression) expressionNode()      {}

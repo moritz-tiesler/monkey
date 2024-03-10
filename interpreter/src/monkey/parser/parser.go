@@ -109,6 +109,7 @@ func (p *Parser) parseStatement() ast.Statement {
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt := &ast.LetStatement{Token: p.curToken}
+	stmt.Start = ast.Position{Line: stmt.Token.Line, Col: stmt.Token.Col}
 
 	if !p.expectPeek(token.IDENT) {
 		return nil
@@ -131,6 +132,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	if p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
+	stmt.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
 
 	return stmt
 }
@@ -229,14 +231,18 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 
 func (p *Parser) parseIfExpression() ast.Expression {
 	expression := &ast.IfExpression{Token: p.curToken}
+	expression.Start = ast.Position{Line: expression.Token.Line, Col: expression.Token.Col}
 	if !p.expectPeek(token.LPAREN) {
 		return nil
 	}
+
 	p.nextToken()
 	expression.Condition = p.parseExpression(LOWEST)
 	if !p.expectPeek(token.RPAREN) {
 		return nil
 	}
+
+	expression.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col}
 	if !p.expectPeek(token.LBRACE) {
 		return nil
 	}
@@ -250,11 +256,14 @@ func (p *Parser) parseIfExpression() ast.Expression {
 		expression.Alternative = p.parseBlockStatement()
 	}
 
+	expression.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
+
 	return expression
 }
 
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	block := &ast.BlockStatement{Token: p.curToken}
+	block.Start = ast.Position{Line: block.Token.Line, Col: block.Token.Col}
 	block.Statements = []ast.Statement{}
 	p.nextToken()
 	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
@@ -264,6 +273,7 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 		}
 		p.nextToken()
 	}
+	block.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
 	return block
 }
 
@@ -279,16 +289,24 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	}
 
 	lit.Value = value
+	lit.Start = ast.Position{Line: lit.Token.Line, Col: lit.Token.Col}
+	lit.End = ast.Position{Line: lit.Token.Line, Col: lit.Token.Col + len(lit.Token.Literal)}
 
 	return lit
 }
 
 func (p *Parser) parseStringLiteral() ast.Expression {
-	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+	sl := &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+	sl.Start = ast.Position{Line: sl.Token.Line, Col: sl.Token.Col}
+	// Plus two to account for two quotes around string
+	sl.End = ast.Position{Line: sl.Token.Line, Col: sl.Token.Col + len(sl.Token.Literal) + 2}
+	return sl
+
 }
 
 func (p *Parser) parseFunctionLiteral() ast.Expression {
 	lit := &ast.FunctionLiteral{Token: p.curToken}
+	lit.Start = ast.Position{Line: lit.Token.Line, Col: lit.Token.Col}
 
 	if !p.expectPeek(token.LPAREN) {
 		return nil
@@ -301,6 +319,7 @@ func (p *Parser) parseFunctionLiteral() ast.Expression {
 	}
 
 	lit.Body = p.parseBlockStatement()
+	lit.End = ast.Position{Line: lit.Body.Range().End.Line, Col: lit.Body.Range().End.Col}
 
 	return lit
 }
@@ -377,7 +396,10 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 }
 
 func (p *Parser) parseBoolean() ast.Expression {
-	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
+	be := &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
+	be.Start = ast.Position{Line: be.Token.Line, Col: be.Token.Col}
+	be.End = ast.Position{Line: be.Token.Line, Col: be.Token.Col + len(be.Token.Literal)}
+	return be
 }
 
 func (p *Parser) parseArrayLiteral() ast.Expression {
