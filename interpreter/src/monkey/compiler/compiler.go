@@ -13,6 +13,10 @@ type EmittedInstruction struct {
 	Position int
 }
 
+type LocationScope struct {
+	locations []ast.NodeRange
+}
+
 type CompilationScope struct {
 	instructions        code.Instructions
 	lastInstruction     EmittedInstruction
@@ -20,10 +24,11 @@ type CompilationScope struct {
 }
 
 type Compiler struct {
-	constants   []object.Object
-	symbolTable *SymbolTable
-	scopes      []CompilationScope
-	scopeIndex  int
+	constants      []object.Object
+	symbolTable    *SymbolTable
+	scopes         []CompilationScope
+	locationScopes []LocationScope
+	scopeIndex     int
 }
 
 func New() *Compiler {
@@ -39,10 +44,11 @@ func New() *Compiler {
 		symbolTable.DefineBuiltin(i, v.Name)
 	}
 	return &Compiler{
-		constants:   []object.Object{},
-		symbolTable: symbolTable,
-		scopes:      []CompilationScope{mainScope},
-		scopeIndex:  0,
+		constants:      []object.Object{},
+		symbolTable:    symbolTable,
+		scopes:         []CompilationScope{mainScope},
+		locationScopes: []LocationScope{{}},
+		scopeIndex:     0,
 	}
 }
 

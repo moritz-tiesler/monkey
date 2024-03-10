@@ -1070,3 +1070,50 @@ func TestRecursiveFunctions(t *testing.T) {
 	}
 	runCompilerTests(t, tests)
 }
+
+type rangeTest struct {
+	input          string
+	expectedRanges []ast.NodeRange
+}
+
+func runRangeTests(t *testing.T, tests []rangeTest) {
+	t.Helper()
+	for _, tt := range tests {
+		program := parse(tt.input)
+		compiler := New()
+		err := compiler.Compile(program)
+		if err != nil {
+			t.Fatalf("compiler error: %s", err)
+		}
+		//bytecode := compiler.Bytecode()
+		compScope := compiler.scopes[compiler.scopeIndex]
+		locationScope := compiler.locationScopes[compiler.scopeIndex]
+		locations := locationScope.locations
+		if len(locations) == 0 {
+			t.Fatalf("no locations created for '%s'", tt.input)
+		}
+		instructions := compScope.instructions
+		for i, ll := range locations {
+			if ll != tt.expectedRanges[i] {
+				t.Errorf("wrong location for instruction %v: expected=%v, got=%v", instructions[i], tt.expectedRanges[i], ll)
+			}
+		}
+		if err != nil {
+			t.Fatalf("testInstructions failed: %s", err)
+		}
+	}
+}
+
+func TestRanges(t *testing.T) {
+	tests := []rangeTest{
+		{
+			"let a = 2",
+			[]ast.NodeRange{
+				{Start: ast.Position{Line: 0, Col: 0}, End: ast.Position{Line: 0, Col: 10}},
+			},
+		},
+	}
+
+	runRangeTests(t, tests)
+
+}
