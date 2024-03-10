@@ -1181,3 +1181,137 @@ if (a == true) {
 
 	}
 }
+
+func TestFunctionLiteralRanges(t *testing.T) {
+	tests := []struct {
+		input             string
+		expectedPos       ast.NodeRange
+		expectedParamsPos ast.NodeRange
+		expectedBodyPos   ast.NodeRange
+	}{
+		{
+			`
+fn(a, b) {
+    let c = a + b
+    return c
+}`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 3}, End: ast.Position{Line: 3, Col: 12}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 3}, End: ast.Position{Line: 1, Col: 7}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 8}, End: ast.Position{Line: 3, Col: 12}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+
+		fe := stmt.Expression.(*ast.FunctionLiteral)
+		params := fe.Parameters
+		firstP := params[0]
+		lastP := params[len(params)-1]
+		body := fe.Body
+
+		if ok := testNodeRange(t, tt.expectedPos, fe.Range()); !ok {
+			t.Errorf("wrong range for Function Literal")
+		}
+
+		if ok := testNodeRange(t, tt.expectedParamsPos, ast.NodeRange{Start: firstP.Range().Start, End: lastP.Range().End}); !ok {
+			t.Errorf("wrong range for function parameters")
+		}
+		if ok := testNodeRange(t, tt.expectedBodyPos, body.Range()); !ok {
+			t.Errorf("wrong range for function body")
+		}
+
+	}
+}
+
+func TestArrayLiteralRanges(t *testing.T) {
+	tests := []struct {
+		input             string
+		expectedPos       ast.NodeRange
+		expectedParamsPos ast.NodeRange
+	}{
+		{
+			`
+[1, true, a + b]
+`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 15}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 15}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+
+		al := stmt.Expression.(*ast.ArrayLiteral)
+		elements := al.Elements
+		firstE := elements[0]
+		lastE := elements[len(elements)-1]
+
+		if ok := testNodeRange(t, tt.expectedPos, al.Range()); !ok {
+			t.Errorf("wrong range for Function Literal")
+		}
+
+		if ok := testNodeRange(t, tt.expectedParamsPos, ast.NodeRange{Start: firstE.Range().Start, End: lastE.Range().End}); !ok {
+			t.Errorf("wrong range for function parameters")
+		}
+
+	}
+}
+
+func TestHashLiteralRanges(t *testing.T) {
+	tests := []struct {
+		input             string
+		expectedPos       ast.NodeRange
+		expectedParamsPos ast.NodeRange
+	}{
+		{
+			`
+{1:a, 2:true, "a":a + b}
+`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 24}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 23}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+
+		hl := stmt.Expression.(*ast.HashLiteral)
+		pairs := hl.OrderedPairs
+		firstE := pairs[0]
+		lastE := pairs[len(pairs)-1]
+
+		if ok := testNodeRange(t, tt.expectedPos, hl.Range()); !ok {
+			t.Errorf("wrong range for Hash Literal")
+		}
+
+		if ok := testNodeRange(t, tt.expectedParamsPos, ast.NodeRange{Start: firstE.Key.Range().Start, End: lastE.Value.Range().End}); !ok {
+			t.Errorf("wrong range for Hash pairs")
+		}
+
+	}
+}

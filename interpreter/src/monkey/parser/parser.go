@@ -391,6 +391,7 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 func (p *Parser) parseHashLiteral() ast.Expression {
 	hash := &ast.HashLiteral{Token: p.curToken}
 	hash.Pairs = make(map[ast.Expression]ast.Expression)
+	hash.OrderedPairs = []ast.HashPair{}
 
 	for !p.peekTokenIs(token.RBRACE) {
 		p.nextToken()
@@ -404,6 +405,7 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 		value := p.parseExpression(LOWEST)
 
 		hash.Pairs[key] = value
+		hash.OrderedPairs = append(hash.OrderedPairs, ast.HashPair{Key: key, Value: value})
 
 		if !p.peekTokenIs(token.RBRACE) && !p.expectPeek(token.COMMA) {
 			return nil

@@ -1,3 +1,4 @@
 code/**
 **/src-*/**
 interpreter/src/monkey/monkey
+**/app/**

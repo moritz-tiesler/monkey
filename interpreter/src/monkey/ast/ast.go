@@ -416,9 +416,15 @@ func (al *ArrayLiteral) Range() NodeRange {
 	}
 }
 
+type HashPair struct {
+	Key   Expression
+	Value Expression
+}
+
 type HashLiteral struct {
-	Token token.Token
-	Pairs map[Expression]Expression
+	Token        token.Token
+	Pairs        map[Expression]Expression
+	OrderedPairs []HashPair
 }
 
 func (hl *HashLiteral) expressionNode()      {}
@@ -438,10 +444,7 @@ func (hl *HashLiteral) String() string {
 
 // TODO fix this function
 func (hl *HashLiteral) Range() NodeRange {
-	return NodeRange{
-		Start: Position{-1, -1},
-		End:   Position{-1, -1},
-	}
+	panic("NodeRange for HashLiteral not implemented. How to deal with 'empty' nodes?")
 }
 
 type IndexExpression struct {
