@@ -1316,3 +1316,79 @@ func(a, b, c)
 		}
 	}
 }
+
+func TestInfixExpressionRanges(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedPos ast.NodeRange
+	}{
+		{
+			`
+1 + 1
+`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 5}},
+		},
+		{
+			`
+1 + 2 * 2
+`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+
+		hl := stmt.Expression.(*ast.InfixExpression)
+
+		if ok := testNodeRange(t, tt.expectedPos, hl.Range()); !ok {
+			t.Errorf("wrong range for Infix Expression")
+		}
+	}
+}
+
+func TestPrefixExpressionRanges(t *testing.T) {
+	tests := []struct {
+		input       string
+		expectedPos ast.NodeRange
+	}{
+		{
+			`
+!true
+`,
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 5}},
+		},
+		{
+			`
+!(a == b)
+`,
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 8}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+
+		hl := stmt.Expression.(*ast.PrefixExpression)
+
+		if ok := testNodeRange(t, tt.expectedPos, hl.Range()); !ok {
+			t.Errorf("wrong range for Prefix Expression")
+		}
+	}
+}
