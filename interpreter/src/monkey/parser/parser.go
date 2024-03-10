@@ -93,7 +93,10 @@ func (p *Parser) ParseProgram() *ast.Program {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	ie := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	ie.Start = ast.Position{Line: ie.Token.Line, Col: ie.Token.Col}
+	ie.End = ast.Position{Line: ie.Token.Line, Col: ie.Token.Col + len(ie.Token.Literal)}
+	return ie
 }
 
 func (p *Parser) parseStatement() ast.Statement {
@@ -116,6 +119,8 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	}
 
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	stmt.Name.Start = ast.Position{Line: stmt.Name.Token.Line, Col: stmt.Name.Token.Col}
+	stmt.Name.End = ast.Position{Line: stmt.Name.Token.Line, Col: stmt.Name.Token.Col + len(stmt.Name.Token.Literal)}
 
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
@@ -334,11 +339,15 @@ func (p *Parser) parserFunctionParameters() []*ast.Identifier {
 	p.nextToken()
 
 	ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	ident.Start = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col}
+	ident.End = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col + len(ident.Token.Literal)}
 	identifiers = append(identifiers, ident)
 	for p.peekTokenIs(token.COMMA) {
 		p.nextToken()
 		p.nextToken()
 		ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+		ident.Start = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col}
+		ident.End = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col + len(ident.Token.Literal)}
 		identifiers = append(identifiers, ident)
 	}
 
@@ -351,7 +360,9 @@ func (p *Parser) parserFunctionParameters() []*ast.Identifier {
 
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
+	exp.Start = ast.Position{Line: exp.Token.Line, Col: exp.Token.Col}
 	exp.Arguments = p.parseExpressionList(token.RPAREN)
+	exp.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
 	return exp
 }
 
@@ -404,14 +415,16 @@ func (p *Parser) parseBoolean() ast.Expression {
 
 func (p *Parser) parseArrayLiteral() ast.Expression {
 	array := &ast.ArrayLiteral{Token: p.curToken}
+	array.Start = ast.Position{Line: array.Token.Line, Col: array.Token.Col}
 
 	array.Elements = p.parseExpressionList(token.RBRACKET)
-
+	array.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
 	return array
 }
 
 func (p *Parser) parseHashLiteral() ast.Expression {
 	hash := &ast.HashLiteral{Token: p.curToken}
+	hash.Start = ast.Position{Line: hash.Token.Line, Col: hash.Token.Col}
 	hash.Pairs = make(map[ast.Expression]ast.Expression)
 	hash.OrderedPairs = []ast.HashPair{}
 
@@ -437,7 +450,7 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 	if !p.expectPeek(token.RBRACE) {
 		return nil
 	}
-
+	hash.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
 	return hash
 }
 

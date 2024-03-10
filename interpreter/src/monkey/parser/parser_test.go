@@ -1049,6 +1049,18 @@ func TestFunctionLiteralWithName(t *testing.T) {
 	}
 }
 
+func testNodeRange(t *testing.T, expected ast.NodeRange, actual ast.NodeRange) bool {
+	if expected.Start != actual.Start {
+		t.Errorf("wrong range start: expected=%v, got=%v", expected.Start, actual.Start)
+		return false
+	}
+	if expected.End != actual.End {
+		t.Errorf("wrong range end: expected=%v, got=%v", expected.End, actual.End)
+		return false
+	}
+	return true
+}
+
 func TestLetStatementRanges(t *testing.T) {
 	tests := []struct {
 		input                 string
@@ -1091,18 +1103,6 @@ func TestLetStatementRanges(t *testing.T) {
 		testNodeRange(t, tt.expectedPosValue, value.Range())
 
 	}
-}
-
-func testNodeRange(t *testing.T, expected ast.NodeRange, actual ast.NodeRange) bool {
-	if expected.Start != actual.Start {
-		t.Errorf("wrong range start: expected=%v, got=%v", expected.Start, actual.Start)
-		return false
-	}
-	if expected.End != actual.End {
-		t.Errorf("wrong range end: expected=%v, got=%v", expected.End, actual.End)
-		return false
-	}
-	return true
 }
 
 func TestIfStatemtentRanges(t *testing.T) {
@@ -1211,17 +1211,15 @@ fn(a, b) {
 
 func TestArrayLiteralRanges(t *testing.T) {
 	tests := []struct {
-		input             string
-		expectedPos       ast.NodeRange
-		expectedParamsPos ast.NodeRange
+		input       string
+		expectedPos ast.NodeRange
 	}{
 		{
 			`
 [1, true, a + b]
 `,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 15}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 15}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 16}},
 		},
 	}
 	for _, tt := range tests {
@@ -1236,59 +1234,85 @@ func TestArrayLiteralRanges(t *testing.T) {
 		stmt := program.Statements[0].(*ast.ExpressionStatement)
 
 		al := stmt.Expression.(*ast.ArrayLiteral)
-		elements := al.Elements
-		firstE := elements[0]
-		lastE := elements[len(elements)-1]
 
 		if ok := testNodeRange(t, tt.expectedPos, al.Range()); !ok {
-			t.Errorf("wrong range for Function Literal")
+			t.Errorf("wrong range for Array Literal")
+		}
+	}
+}
+
+func TestHashLiteralRanges(t *testing.T) {
+	tests := []struct {
+		input             string
+		expectedPos       ast.NodeRange
+		expectedParamsPos ast.NodeRange
+	}{
+		{
+			`
+{1:a, 2:true, "a":a + b}
+`,
+
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 24}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 23}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
+
+		hl := stmt.Expression.(*ast.HashLiteral)
+		pairs := hl.OrderedPairs
+		firstE := pairs[0]
+		lastE := pairs[len(pairs)-1]
+
+		if ok := testNodeRange(t, tt.expectedPos, hl.Range()); !ok {
+			t.Errorf("wrong range for Hash Literal")
 		}
 
-		if ok := testNodeRange(t, tt.expectedParamsPos, ast.NodeRange{Start: firstE.Range().Start, End: lastE.Range().End}); !ok {
-			t.Errorf("wrong range for function parameters")
+		if ok := testNodeRange(t, tt.expectedParamsPos, ast.NodeRange{Start: firstE.Key.Range().Start, End: lastE.Value.Range().End}); !ok {
+			t.Errorf("wrong range for Hash pairs")
 		}
 
 	}
 }
 
-//func TestHashLiteralRanges(t *testing.T) {
-//tests := []struct {
-//input             string
-//expectedPos       ast.NodeRange
-//expectedParamsPos ast.NodeRange
-//}{
-//{
-//`
-//{1:a, 2:true, "a":a + b}
-//`,
+func TestCallExpressionRanges(t *testing.T) {
+	tests := []struct {
+		input             string
+		expectedPos       ast.NodeRange
+		expectedParamsPos ast.NodeRange
+	}{
+		{
+			`
+func(a, b, c)
+`,
 
-//ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 24}},
-//ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 23}},
-//},
-//}
-//for _, tt := range tests {
-//l := lexer.New(tt.input)
-//p := New(l)
-//program := p.ParseProgram()
-//checkParserErrors(t, p)
-//if len(program.Statements) != 1 {
-//t.Fatalf("program.Statements does not contain 1 statements. got=%d",
-//len(program.Statements))
-//}
-//stmt := program.Statements[0].(*ast.ExpressionStatement)
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 13}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 4}, End: ast.Position{Line: 1, Col: 13}},
+		},
+	}
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+		stmt := program.Statements[0].(*ast.ExpressionStatement)
 
-//hl := stmt.Expression.(*ast.HashLiteral)
-//pairs := hl.OrderedPairs
-//firstE := pairs[0]
-//lastE := pairs[len(pairs)-1]
+		ce := stmt.Expression.(*ast.CallExpression)
 
-//if ok := testNodeRange(t, tt.expectedPos, hl.Range()); !ok {
-//t.Errorf("wrong range for Hash Literal")
-//}
-
-//if ok := testNodeRange(t, tt.expectedParamsPos, ast.NodeRange{Start: firstE.Key.Range().Start, End: lastE.Value.Range().End}); !ok {
-//t.Errorf("wrong range for Hash pairs")
-//}
-
-//}
-//}
+		if ok := testNodeRange(t, tt.expectedPos, ce.Range()); !ok {
+			t.Errorf("wrong range for Call Expression")
+		}
+	}
+}

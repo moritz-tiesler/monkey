@@ -187,8 +187,8 @@ func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
 func (i *Identifier) String() string       { return i.Value }
 func (i *Identifier) Range() NodeRange {
 	return NodeRange{
-		Start: Position{i.Token.Line, i.Token.Col},
-		End:   Position{i.Token.Line, i.Token.Col + len(i.Token.Literal)},
+		Start: i.Start,
+		End:   i.End,
 	}
 }
 
@@ -396,10 +396,9 @@ func (ce *CallExpression) String() string {
 	return out.String()
 }
 func (ce *CallExpression) Range() NodeRange {
-	lastArg := ce.Arguments[len(ce.Arguments)-1]
 	return NodeRange{
-		Start: Position{ce.Function.Range().Start.Line, ce.Function.Range().Start.Col},
-		End:   Position{lastArg.Range().End.Line, lastArg.Range().End.Col},
+		Start: ce.Function.Range().Start,
+		End:   ce.End,
 	}
 }
 
@@ -427,11 +426,9 @@ func (al *ArrayLiteral) String() string {
 	return out.String()
 }
 func (al *ArrayLiteral) Range() NodeRange {
-	first := al.Elements[0]
-	last := al.Elements[len(al.Elements)-1]
 	return NodeRange{
-		Start: Position{first.Range().Start.Line, first.Range().Start.Col},
-		End:   Position{last.Range().End.Line, last.Range().End.Col},
+		Start: al.Start,
+		End:   al.End,
 	}
 }
 
@@ -465,7 +462,10 @@ func (hl *HashLiteral) String() string {
 
 // TODO fix this function
 func (hl *HashLiteral) Range() NodeRange {
-	panic("NodeRange for HashLiteral not implemented. How to deal with 'empty' nodes?")
+	return NodeRange{
+		Start: hl.Start,
+		End:   hl.End,
+	}
 }
 
 type IndexExpression struct {
