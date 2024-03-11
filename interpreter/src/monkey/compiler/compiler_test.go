@@ -1073,7 +1073,7 @@ func TestRecursiveFunctions(t *testing.T) {
 
 type rangeTest struct {
 	input          string
-	expectedRanges []ast.NodeRange
+	expectedRanges []LocationScope
 }
 
 func runRangeTests(t *testing.T, tests []rangeTest) {
@@ -1087,17 +1087,27 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 		}
 		//bytecode := compiler.Bytecode()
 		compScope := compiler.scopes[compiler.scopeIndex]
-		locationScope := compiler.locationScopes[compiler.scopeIndex]
-		locations := locationScope.locations
-		if len(locations) == 0 {
-			t.Fatalf("no locations created for '%s'", tt.input)
-		}
 		instructions := compScope.instructions
-		for i, ll := range locations {
-			if ll != tt.expectedRanges[i] {
-				t.Errorf("wrong location for instruction %v: expected=%v, got=%v", instructions[i], tt.expectedRanges[i], ll)
+
+		if len(compiler.locationScopes) != len(tt.expectedRanges) {
+			t.Fatalf("wrong number of  locations created for '%s': expected=%d, got=%d",
+				tt.input, len(tt.expectedRanges), len(compiler.locationScopes))
+		}
+
+		for i, ls := range tt.expectedRanges {
+			acutualDepth := compiler.locationScopes[i].depth
+			if ls.depth != acutualDepth {
+				t.Errorf("wrong depth for scope %v: expected=%d, got=%d",
+					compiler.locationScopes[i], ls.depth, acutualDepth)
+			}
+			for j, nr := range ls.locations {
+				acutalRange := compiler.locationScopes[i].locations[j]
+				if nr != acutalRange {
+					t.Errorf("wrong location for instruction \n%s: \nexpected=%v, got=%v", instructions.String(), nr, acutalRange)
+				}
 			}
 		}
+
 		if err != nil {
 			t.Fatalf("testInstructions failed: %s", err)
 		}
@@ -1107,9 +1117,52 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 func TestRanges(t *testing.T) {
 	tests := []rangeTest{
 		{
-			"let a = 2",
-			[]ast.NodeRange{
-				{Start: ast.Position{Line: 0, Col: 0}, End: ast.Position{Line: 0, Col: 10}},
+			`
+let a = 2
+`,
+			[]LocationScope{
+				{
+					0,
+					[]ast.NodeRange{
+						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
+					},
+				},
+			},
+		},
+		{
+			`
+let func = fn(a) {let res = a * 2; res;}
+`,
+			[]LocationScope{
+				{
+					0,
+					[]ast.NodeRange{
+						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 40}},
+						{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 40}},
+					},
+				},
+				{
+					1,
+					[]ast.NodeRange{
+						{Start: ast.Position{Line: 1, Col: 18}, End: ast.Position{Line: 1, Col: 34}},
+						{Start: ast.Position{Line: 1, Col: 35}, End: ast.Position{Line: 1, Col: 38}},
+					},
+				},
+			},
+		},
+		{
+			`
+if (true) {1} else {2}
+`,
+			[]LocationScope{
+				{
+					depth: 0,
+					locations: []ast.NodeRange{
+						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 22}},
+						{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 12}},
+						{Start: ast.Position{Line: 1, Col: 20}, End: ast.Position{Line: 1, Col: 21}},
+					},
+				},
 			},
 		},
 	}

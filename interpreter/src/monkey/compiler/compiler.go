@@ -14,6 +14,7 @@ type EmittedInstruction struct {
 }
 
 type LocationScope struct {
+	depth     int
 	locations []ast.NodeRange
 }
 
@@ -28,6 +29,7 @@ type Compiler struct {
 	symbolTable    *SymbolTable
 	scopes         []CompilationScope
 	locationScopes []LocationScope
+	scopeDepth     int
 	scopeIndex     int
 }
 
@@ -47,7 +49,8 @@ func New() *Compiler {
 		constants:      []object.Object{},
 		symbolTable:    symbolTable,
 		scopes:         []CompilationScope{mainScope},
-		locationScopes: []LocationScope{{}},
+		locationScopes: []LocationScope{LocationScope{depth: 0, locations: []ast.NodeRange{}}},
+		scopeDepth:     0,
 		scopeIndex:     0,
 	}
 }
@@ -74,6 +77,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if err != nil {
 			return err
 		}
+		existingLocations := c.locationScopes[c.scopeIndex].locations
+		c.locationScopes[c.scopeIndex].locations = append(existingLocations, node.Range())
 		c.emit(code.OpPop)
 
 	case *ast.InfixExpression:
@@ -136,6 +141,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 	case *ast.IfExpression:
 		err := c.Compile(node.Condition)
+		c.trackNode(node)
 		if err != nil {
 			return err
 		}
@@ -229,12 +235,14 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 	case *ast.LetStatement:
 		symbol := c.symbolTable.Define(node.Name.Value)
+		c.trackNode(node)
 		err := c.Compile(node.Value)
 		if err != nil {
 			return err
 		}
 		if symbol.Scope == GlobalScope {
 			c.emit(code.OpSetGlobal, symbol.Index)
+
 		} else {
 			c.emit(code.OpSetLocal, symbol.Index)
 		}
@@ -278,8 +286,9 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		freeSymbols := c.symbolTable.FreeSymbols
 		numLocals := c.symbolTable.numDefinitions
-		instructions := c.leaveScope()
 
+		instructions := c.leaveScope()
+		c.trackNode(node)
 		for _, s := range freeSymbols {
 			c.loadSymbol(s)
 		}
@@ -415,6 +424,7 @@ func (c *Compiler) loadSymbol(s Symbol) {
 }
 
 func (c *Compiler) enterScope() {
+	c.scopeDepth += 1
 	scope := CompilationScope{
 		instructions:        code.Instructions{},
 		lastInstruction:     EmittedInstruction{},
@@ -422,12 +432,14 @@ func (c *Compiler) enterScope() {
 	}
 
 	c.scopes = append(c.scopes, scope)
+	c.locationScopes = append(c.locationScopes, LocationScope{depth: c.scopeDepth, locations: []ast.NodeRange{}})
 	c.scopeIndex++
 
 	c.symbolTable = NewEnclosedSymbolTable(c.symbolTable)
 }
 
 func (c *Compiler) leaveScope() code.Instructions {
+	c.scopeDepth -= 1
 	instructions := c.currentInstructions()
 
 	c.scopes = c.scopes[:len(c.scopes)-1]
@@ -448,4 +460,9 @@ func (c *Compiler) Bytecode() *Bytecode {
 type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []object.Object
+}
+
+func (c *Compiler) trackNode(node ast.Node) {
+	existingLocations := c.locationScopes[c.scopeIndex].locations
+	c.locationScopes[c.scopeIndex].locations = append(existingLocations, node.Range())
 }
