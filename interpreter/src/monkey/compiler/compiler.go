@@ -25,12 +25,15 @@ type CompilationScope struct {
 }
 
 type Compiler struct {
-	constants      []object.Object
-	symbolTable    *SymbolTable
-	scopes         []CompilationScope
-	locationScopes []LocationScope
+	constants   []object.Object
+	symbolTable *SymbolTable
+	scopes      []CompilationScope
+	scopeIndex  int
+	// Use for mapping OpCode to source location
 	scopeDepth     int
-	scopeIndex     int
+	locationScopes []LocationScope
+	locationMap    map[int]int
+	locationIndex  int
 }
 
 func New() *Compiler {
@@ -49,8 +52,9 @@ func New() *Compiler {
 		constants:      []object.Object{},
 		symbolTable:    symbolTable,
 		scopes:         []CompilationScope{mainScope},
-		locationScopes: []LocationScope{LocationScope{depth: 0, locations: []ast.NodeRange{}}},
 		scopeDepth:     0,
+		locationScopes: []LocationScope{LocationScope{depth: 0, locations: []ast.NodeRange{}}},
+		locationMap:    make(map[int]int),
 		scopeIndex:     0,
 	}
 }
@@ -74,11 +78,10 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 	case *ast.ExpressionStatement:
 		err := c.Compile(node.Expression)
+		//c.trackNode(node)
 		if err != nil {
 			return err
 		}
-		existingLocations := c.locationScopes[c.scopeIndex].locations
-		c.locationScopes[c.scopeIndex].locations = append(existingLocations, node.Range())
 		c.emit(code.OpPop)
 
 	case *ast.InfixExpression:
@@ -140,8 +143,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 	case *ast.IfExpression:
-		err := c.Compile(node.Condition)
 		c.trackNode(node)
+		err := c.Compile(node.Condition)
 		if err != nil {
 			return err
 		}
@@ -248,6 +251,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 	case *ast.Identifier:
+		//c.trackNode(node)
 		symbol, ok := c.symbolTable.Resolve(node.Value)
 		if !ok {
 			return fmt.Errorf("undefined variable %s", node.Value)
@@ -256,12 +260,14 @@ func (c *Compiler) Compile(node ast.Node) error {
 		c.loadSymbol(symbol)
 
 	case *ast.Boolean:
+		//c.trackNode(node)
 		if node.Value {
 			c.emit(code.OpTrue)
 		} else {
 			c.emit(code.OpFalse)
 		}
 	case *ast.FunctionLiteral:
+		c.trackNode(node)
 		c.enterScope()
 
 		if node.Name != "" {
@@ -288,7 +294,6 @@ func (c *Compiler) Compile(node ast.Node) error {
 		numLocals := c.symbolTable.numDefinitions
 
 		instructions := c.leaveScope()
-		c.trackNode(node)
 		for _, s := range freeSymbols {
 			c.loadSymbol(s)
 		}
@@ -402,6 +407,7 @@ func (c *Compiler) addInstruction(ins []byte) int {
 	updatedInstructions := append(c.currentInstructions(), ins...)
 
 	c.scopes[c.scopeIndex].instructions = updatedInstructions
+	c.locationMap[posNewInstruction] = len(c.locationScopes[c.scopeIndex].locations) - 1
 
 	return posNewInstruction
 }
@@ -433,6 +439,7 @@ func (c *Compiler) enterScope() {
 
 	c.scopes = append(c.scopes, scope)
 	c.locationScopes = append(c.locationScopes, LocationScope{depth: c.scopeDepth, locations: []ast.NodeRange{}})
+	c.locationIndex += len(c.locationScopes[c.scopeIndex].locations)
 	c.scopeIndex++
 
 	c.symbolTable = NewEnclosedSymbolTable(c.symbolTable)
@@ -447,6 +454,8 @@ func (c *Compiler) leaveScope() code.Instructions {
 
 	c.symbolTable = c.symbolTable.Outer
 
+	c.locationIndex += len(c.locationScopes[c.scopeIndex].locations)
+
 	return instructions
 }
 
@@ -455,6 +464,23 @@ func (c *Compiler) Bytecode() *Bytecode {
 		Instructions: c.currentInstructions(),
 		Constants:    c.constants,
 	}
+}
+
+type LocationData struct {
+	Depth int
+	Range ast.NodeRange
+}
+
+func (c *Compiler) Locations() []LocationData {
+	data := []LocationData{}
+
+	for _, lc := range c.locationScopes {
+		for _, loc := range lc.locations {
+			data = append(data, LocationData{Depth: lc.depth, Range: loc})
+		}
+	}
+
+	return data
 }
 
 type Bytecode struct {
