@@ -428,6 +428,7 @@ func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
 			return vm, fmt.Errorf("error when testing condition")
 		}
 		if stop {
+			//vm.currentFrame().ip--
 			return vm, nil
 		} else {
 			err := vm.RunOp()

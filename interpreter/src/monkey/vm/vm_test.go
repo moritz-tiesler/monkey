@@ -762,6 +762,14 @@ type vmDebuggerTestCase struct {
 	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
 }
 
+type vmDebuggerTestCaseWithPreparation struct {
+	input            string
+	debugFuncInput   compiler.LocationData
+	prepFunc         func(*VM) *VM
+	expectedLocation compiler.LocationData
+	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
+}
+
 func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 
 	for _, tt := range tests {
@@ -801,33 +809,74 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 	}
 }
 
-func TestDebugRun(t *testing.T) {
+func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPreparation) {
 
-	stepOver := func(current compiler.LocationData) func(vm *VM) (bool, error) {
+	for _, tt := range tests {
+		program := parse(tt.input)
+		comp := compiler.New()
+		err := comp.Compile(program)
+		if err != nil {
+			t.Fatalf("compiler error: %s", err)
+		}
 
-		return func(vm *VM) (bool, error) {
+		for i, constant := range comp.Bytecode().Constants {
+			fmt.Printf("CONSTANT %d %p (%T):\n", i, constant, constant)
 
-			cycleLocation := vm.SourceLocation()
-			cycleLine := cycleLocation.Range.Start.Line
-			if current.Range.Start.Line != cycleLine {
-				return true, nil
-			} else {
-				return false, nil
+			switch constant := constant.(type) {
+			case *object.CompiledFunction:
+				fmt.Printf(" Instructions:\n%s", constant.Instructions)
+			case *object.Integer:
+				fmt.Printf(" Value: %d\n", constant.Value)
+
 			}
+
+			fmt.Printf("\n")
+		}
+
+		vm := NewWithLocations(comp.Bytecode(), comp.Locations(), comp.LocationMap())
+		vm = tt.prepFunc(vm)
+		vm.currentFrame().ip--
+		step := tt.debugAction(tt.debugFuncInput)
+		vm, err = vm.RunWithCondition(step)
+		if err != nil {
+			t.Fatalf("vm error: %s", err)
+		}
+		// stackElem := vm.LastPoppedStackElem()
+		currentLocation := vm.SourceLocation()
+		if currentLocation != tt.expectedLocation {
+			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
+		}
+
+	}
+}
+
+func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
+
+	return func(vm *VM) (bool, error) {
+
+		cycleLocation := vm.SourceLocation()
+		cycleLine := cycleLocation.Range.Start.Line
+		if current.Range.Start.Line != cycleLine {
+			return true, nil
+		} else {
+			return false, nil
 		}
 	}
+}
 
-	runUntilBreakPoint := func(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
-		return func(vm *VM) (bool, error) {
-			cycleLocation := vm.SourceLocation()
-			cycleLine := cycleLocation.Range.Start.Line
-			if breakOn.Range.Start.Line == cycleLine {
-				return true, nil
-			} else {
-				return false, nil
-			}
+func runUntilBreakPoint(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
+	return func(vm *VM) (bool, error) {
+		cycleLocation := vm.SourceLocation()
+		cycleLine := cycleLocation.Range.Start.Line
+		if breakOn.Range.Start.Line == cycleLine {
+			return true, nil
+		} else {
+			return false, nil
 		}
 	}
+}
+
+func TestStepOver(t *testing.T) {
 
 	tests := []vmDebuggerTestCase{
 		{
@@ -851,6 +900,14 @@ let c = 4
 			},
 			debugAction: stepOver,
 		},
+	}
+
+	runVmDebuggingTests(t, tests)
+}
+
+func TestBreakPoints(t *testing.T) {
+
+	tests := []vmDebuggerTestCase{
 		{
 			input: `
 let a = 2
@@ -875,4 +932,61 @@ let c = 4
 	}
 
 	runVmDebuggingTests(t, tests)
+}
+
+func stepInto(into compiler.LocationData) func(*VM) (bool, error) {
+	startingDepth := into.Depth
+	return func(vm *VM) (bool, error) {
+		//cycleLocation := vm.SourceLocation()
+		cycleDepth := vm.framesIndex - 1
+		if cycleDepth > startingDepth {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+
+}
+
+func TestStepInto(t *testing.T) {
+
+	tests := []vmDebuggerTestCaseWithPreparation{
+		{
+			input: `
+let func = fn(x) {
+	let y = x + 1
+	return y
+}
+let b = 3
+func(b)
+let c = 5
+`,
+			debugFuncInput: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 0},
+					End:   ast.Position{Line: 3, Col: 1}}},
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 1, Col: 11},
+					End:   ast.Position{Line: 4, Col: 1},
+				},
+			},
+			debugAction: stepInto,
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 6, Col: 0},
+						End:   ast.Position{Line: 6, Col: 7},
+					},
+				}
+				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+		},
+	}
+
+	runVmDebuggingTestsWithPrep(t, tests)
 }
