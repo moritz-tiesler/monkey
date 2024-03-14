@@ -1254,8 +1254,12 @@ func(1)
 					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 3, Col: 1}},
 				},
 				{
-					Depth: 1,
+					Depth: 0,
 					Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
+				},
+				{
+					Depth: 1,
+					Range: ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 13}},
 				},
 			},
 		},

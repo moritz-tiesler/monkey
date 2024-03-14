@@ -757,6 +757,7 @@ func TestRecursiveFibonacci(t *testing.T) {
 
 type vmDebuggerTestCase struct {
 	input            string
+	debugFuncInput   compiler.LocationData
 	expectedLocation compiler.LocationData
 	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
 }
@@ -786,7 +787,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 		}
 
 		vm := NewWithLocations(comp.Bytecode(), comp.Locations(), comp.LocationMap())
-		step := tt.debugAction(vm.SourceLocation())
+		step := tt.debugAction(tt.debugFuncInput)
 		vm, err = vm.RunWithCondition(step)
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
@@ -800,7 +801,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 	}
 }
 
-func TestStepOver(t *testing.T) {
+func TestDebugRun(t *testing.T) {
 
 	stepOver := func(current compiler.LocationData) func(vm *VM) (bool, error) {
 
@@ -816,12 +817,30 @@ func TestStepOver(t *testing.T) {
 		}
 	}
 
+	runUntilBreakPoint := func(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
+		return func(vm *VM) (bool, error) {
+			cycleLocation := vm.SourceLocation()
+			cycleLine := cycleLocation.Range.Start.Line
+			if breakOn.Range.Start.Line == cycleLine {
+				return true, nil
+			} else {
+				return false, nil
+			}
+		}
+	}
+
 	tests := []vmDebuggerTestCase{
 		{
 			input: `
 let a = 2
 let b = 3
+let c = 4
 `,
+			debugFuncInput: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 1, Col: 0},
+					End:   ast.Position{Line: 1, Col: 9}}},
 
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
@@ -831,6 +850,27 @@ let b = 3
 				},
 			},
 			debugAction: stepOver,
+		},
+		{
+			input: `
+let a = 2
+let b = 3
+a
+let c = 4
+`,
+			debugFuncInput: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 0},
+					End:   ast.Position{Line: 3, Col: 1}}},
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 0},
+					End:   ast.Position{Line: 3, Col: 1},
+				},
+			},
+			debugAction: runUntilBreakPoint,
 		},
 	}
 

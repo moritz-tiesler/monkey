@@ -77,8 +77,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 	case *ast.ExpressionStatement:
+		c.trackNode(node)
 		err := c.Compile(node.Expression)
-		//c.trackNode(node)
 		if err != nil {
 			return err
 		}

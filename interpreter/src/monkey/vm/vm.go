@@ -418,8 +418,6 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 	return loc
 }
 
-type ConditionalRun func(*VM) (*VM, error)
-
 type RunCondition func(*VM) (bool, error)
 
 func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
