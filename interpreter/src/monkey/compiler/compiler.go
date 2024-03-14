@@ -492,3 +492,7 @@ func (c *Compiler) trackNode(node ast.Node) {
 	existingLocations := c.locationScopes[c.scopeIndex].locations
 	c.locationScopes[c.scopeIndex].locations = append(existingLocations, node.Range())
 }
+
+func (c *Compiler) LocationMap() map[int]int {
+	return c.locationMap
+}

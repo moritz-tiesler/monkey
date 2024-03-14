@@ -25,19 +25,19 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 			t.Fatalf("compiler error: %s", err)
 		}
 
-		for i, constant := range comp.Bytecode().Constants {
-			fmt.Printf("CONSTANT %d %p (%T):\n", i, constant, constant)
+		//for i, constant := range comp.Bytecode().Constants {
+		//fmt.Printf("CONSTANT %d %p (%T):\n", i, constant, constant)
 
-			switch constant := constant.(type) {
-			case *object.CompiledFunction:
-				fmt.Printf(" Instructions:\n%s", constant.Instructions)
-			case *object.Integer:
-				fmt.Printf(" Value: %d\n", constant.Value)
+		//switch constant := constant.(type) {
+		//case *object.CompiledFunction:
+		//fmt.Printf(" Instructions:\n%s", constant.Instructions)
+		//case *object.Integer:
+		//fmt.Printf(" Value: %d\n", constant.Value)
 
-			}
+		//}
 
-			fmt.Printf("\n")
-		}
+		//fmt.Printf("\n")
+		//}
 
 		vm := New(comp.Bytecode())
 		err = vm.Run()
@@ -753,4 +753,86 @@ func TestRecursiveFibonacci(t *testing.T) {
 		},
 	}
 	runVmTests(t, tests)
+}
+
+type vmDebuggerTestCase struct {
+	input            string
+	expectedLocation compiler.LocationData
+	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
+}
+
+func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
+
+	for _, tt := range tests {
+		program := parse(tt.input)
+		comp := compiler.New()
+		err := comp.Compile(program)
+		if err != nil {
+			t.Fatalf("compiler error: %s", err)
+		}
+
+		for i, constant := range comp.Bytecode().Constants {
+			fmt.Printf("CONSTANT %d %p (%T):\n", i, constant, constant)
+
+			switch constant := constant.(type) {
+			case *object.CompiledFunction:
+				fmt.Printf(" Instructions:\n%s", constant.Instructions)
+			case *object.Integer:
+				fmt.Printf(" Value: %d\n", constant.Value)
+
+			}
+
+			fmt.Printf("\n")
+		}
+
+		vm := NewWithLocations(comp.Bytecode(), comp.Locations(), comp.LocationMap())
+		step := tt.debugAction(vm.SourceLocation())
+		vm, err = vm.RunWithCondition(step)
+		if err != nil {
+			t.Fatalf("vm error: %s", err)
+		}
+		// stackElem := vm.LastPoppedStackElem()
+		currentLocation := vm.SourceLocation()
+		if currentLocation != tt.expectedLocation {
+			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
+		}
+
+	}
+}
+
+func TestStepOver(t *testing.T) {
+
+	stepOver := func(current compiler.LocationData) func(vm *VM) (bool, error) {
+
+		return func(vm *VM) (bool, error) {
+
+			cycleLocation := vm.SourceLocation()
+			cycleLine := cycleLocation.Range.Start.Line
+			if current.Range.Start.Line != cycleLine {
+				return true, nil
+			} else {
+				return false, nil
+			}
+		}
+	}
+
+	tests := []vmDebuggerTestCase{
+		{
+			input: `
+let a = 2
+let b = 3
+`,
+
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 2, Col: 0},
+					End:   ast.Position{Line: 2, Col: 9},
+				},
+			},
+			debugAction: stepOver,
+		},
+	}
+
+	runVmDebuggingTests(t, tests)
 }
