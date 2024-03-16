@@ -1073,7 +1073,6 @@ func TestRecursiveFunctions(t *testing.T) {
 
 type rangeTest struct {
 	input             string
-	expectedScopes    []LocationScope
 	expectedLocations []LocationData
 }
 
@@ -1090,10 +1089,10 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 		//compScope := compiler.scopes[compiler.scopeIndex]
 		flatLocations := compiler.Locations()
 
-		if len(compiler.locationScopes) != len(tt.expectedScopes) {
-			t.Fatalf("wrong number of  scopes created for '%s': expected=%d, got=%d",
-				tt.input, len(tt.expectedScopes), len(compiler.locationScopes))
-		}
+		//if len(compiler.locationScopes) != len(tt.expectedScopes) {
+		//t.Fatalf("wrong number of  scopes created for '%s': expected=%d, got=%d",
+		//tt.input, len(tt.expectedScopes), len(compiler.locationScopes))
+		//}
 
 		if len(flatLocations) != len(tt.expectedLocations) {
 			t.Fatalf("wrong number of locations created for '%s': expected=%d, got=%d",
@@ -1136,91 +1135,66 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 
 func TestRanges(t *testing.T) {
 	tests := []rangeTest{
-		// 		{
-		// 			`
-		// let a = 2
-		// `,
-		// 			[]LocationScope{
-		// 				{
-		// 					0,
-		// 					[]ast.NodeRange{
-		// 						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
-		// 					},
-		// 				},
-		// 			},
-		// 			[]LocationData{
-		// 				LocationData{
-		// 					Depth: 0, Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
-		// 				},
-		// 			},
-		// 		},
-		// 		{
-		// 			`
-		// if (true) {
-		//     1
-		// } else {
-		//     2
-		// }
-		// `,
-		// 			[]LocationScope{
-		// 				{
-		// 					depth: 0,
-		// 					locations: []ast.NodeRange{
-		// 						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 22}},
-		// 						//{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 12}},
-		// 						//{Start: ast.Position{Line: 1, Col: 20}, End: ast.Position{Line: 1, Col: 21}},
-		// 					},
-		// 				},
-		// 			},
-		// 			[]LocationData{
-		// 				LocationData{
-		// 					Depth: 0,
-		// 					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 5, Col: 1}},
-		// 				},
-		// 				//LocationData{
-		// 				//Depth: 0,
-		// 				//Range: ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 5}},
-		// 				//},
-		// 				//LocationData{
-		// 				//Depth: 0,
-		// 				//Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 4}, End: ast.Position{Line: 4, Col: 5}},
-		// 				//},
-		// 			},
-		// 		},
-		// 		{
-		// 			`
-		// let func = fn(a) {let res = a * 2;}
-		// `,
-		// 			[]LocationScope{
-		// 				{
-		// 					0,
-		// 					[]ast.NodeRange{
-		// 						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 35}},
-		// 						{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 40}},
-		// 					},
-		// 				},
-		// 				{
-		// 					1,
-		// 					[]ast.NodeRange{
-		// 						{Start: ast.Position{Line: 1, Col: 18}, End: ast.Position{Line: 1, Col: 34}},
-		// 					},
-		// 				},
-		// 			},
-		// 			[]LocationData{
-		// 				{
-		// 					Depth: 0,
-		// 					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 35}},
-		// 				},
-		// 				{
-		// 					Depth: 0,
-		// 					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 35}},
-		// 				},
-		// 				{
-		// 					Depth: 1,
-		// 					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 18}, End: ast.Position{Line: 1, Col: 34}},
-		// 				},
-		// 			},
-		// 		},
+		{
+			`
+let a = 2
+		 `,
+			[]LocationData{
+				LocationData{
+					Depth: 0, Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
+				},
+			},
+		},
+		{
+			`
+if (true) {
+    1
+} else {
+    2
+}
+		 `,
+			[]LocationData{
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 5, Col: 1}},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 5, Col: 1}},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 5}},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 4}, End: ast.Position{Line: 4, Col: 5}},
+				},
+			},
+		},
+		{
+			`
+let func = fn(a) {let res = a * 2;}
+		 `,
+			[]LocationData{
+				{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 35}},
+				},
+				{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 35}},
+				},
+				{
+					Depth: 1,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 17}, End: ast.Position{Line: 1, Col: 35}},
+				},
+				{
+					Depth: 1,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 18}, End: ast.Position{Line: 1, Col: 34}},
+				},
+			},
+		},
 		{
 			`
 let func = fn(a) {
@@ -1228,22 +1202,6 @@ let func = fn(a) {
 }
 func(1)
 `,
-			[]LocationScope{
-				{
-					0,
-					[]ast.NodeRange{
-						{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 3, Col: 1}},
-						{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 3, Col: 1}},
-						{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
-					},
-				},
-				{
-					1,
-					[]ast.NodeRange{
-						{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 13}},
-					},
-				},
-			},
 			[]LocationData{
 				{
 					Depth: 0,
@@ -1254,12 +1212,21 @@ func(1)
 					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 3, Col: 1}},
 				},
 				{
-					Depth: 0,
-					Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
+					Depth: 1,
+					Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 17}, End: ast.Position{Line: 3, Col: 1}},
 				},
 				{
 					Depth: 1,
 					Range: ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 13}},
+				},
+
+				{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
+				},
+				{
+					Depth: 0,
+					Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
 				},
 			},
 		},

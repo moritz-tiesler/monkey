@@ -29,11 +29,12 @@ type Compiler struct {
 	symbolTable *SymbolTable
 	scopes      []CompilationScope
 	scopeIndex  int
-	// Use for mapping OpCode to source location
-	scopeDepth     int
-	locationScopes []LocationScope
-	locationMap    map[int]int
-	locationIndex  int
+	// Used for mapping OpCode to source location
+	globalInstructionCounter int
+	scopeDepth               int
+	locationMap              map[int]int
+	locations                []LocationData
+	locationIndex            int
 }
 
 func New() *Compiler {
@@ -49,13 +50,16 @@ func New() *Compiler {
 		symbolTable.DefineBuiltin(i, v.Name)
 	}
 	return &Compiler{
-		constants:      []object.Object{},
-		symbolTable:    symbolTable,
-		scopes:         []CompilationScope{mainScope},
-		scopeDepth:     0,
-		locationScopes: []LocationScope{LocationScope{depth: 0, locations: []ast.NodeRange{}}},
-		locationMap:    make(map[int]int),
-		scopeIndex:     0,
+		constants:   []object.Object{},
+		symbolTable: symbolTable,
+		scopes:      []CompilationScope{mainScope},
+		scopeIndex:  0,
+
+		globalInstructionCounter: 0,
+		scopeDepth:               0,
+		locationMap:              make(map[int]int),
+		locations:                []LocationData{},
+		locationIndex:            0,
 	}
 }
 
@@ -355,7 +359,6 @@ func (c *Compiler) setLastInstruction(op code.Opcode, pos int) {
 
 	c.scopes[c.scopeIndex].previousInstruction = previous
 	c.scopes[c.scopeIndex].lastInstruction = last
-
 }
 
 func (c *Compiler) lastInstructionIs(op code.Opcode) bool {
@@ -408,8 +411,11 @@ func (c *Compiler) addInstruction(ins []byte) int {
 	posNewInstruction := len(c.currentInstructions())
 	updatedInstructions := append(c.currentInstructions(), ins...)
 
+	c.globalInstructionCounter += 1
+
 	c.scopes[c.scopeIndex].instructions = updatedInstructions
-	c.locationMap[posNewInstruction] = len(c.locationScopes[c.scopeIndex].locations) - 1
+
+	c.mapInstructionToLocation(c.globalInstructionCounter, c.locationIndex)
 
 	return posNewInstruction
 }
@@ -440,8 +446,6 @@ func (c *Compiler) enterScope() {
 	}
 
 	c.scopes = append(c.scopes, scope)
-	c.locationScopes = append(c.locationScopes, LocationScope{depth: c.scopeDepth, locations: []ast.NodeRange{}})
-	c.locationIndex += len(c.locationScopes[c.scopeIndex].locations)
 	c.scopeIndex++
 
 	c.symbolTable = NewEnclosedSymbolTable(c.symbolTable)
@@ -455,8 +459,6 @@ func (c *Compiler) leaveScope() code.Instructions {
 	c.scopeIndex--
 
 	c.symbolTable = c.symbolTable.Outer
-
-	c.locationIndex += len(c.locationScopes[c.scopeIndex].locations)
 
 	return instructions
 }
@@ -474,15 +476,7 @@ type LocationData struct {
 }
 
 func (c *Compiler) Locations() []LocationData {
-	data := []LocationData{}
-
-	for _, lc := range c.locationScopes {
-		for _, loc := range lc.locations {
-			data = append(data, LocationData{Depth: lc.depth, Range: loc})
-		}
-	}
-
-	return data
+	return c.locations
 }
 
 type Bytecode struct {
@@ -491,10 +485,18 @@ type Bytecode struct {
 }
 
 func (c *Compiler) trackNode(node ast.Node) {
-	existingLocations := c.locationScopes[c.scopeIndex].locations
-	c.locationScopes[c.scopeIndex].locations = append(existingLocations, node.Range())
+	newLoc := LocationData{Depth: c.scopeDepth, Range: node.Range()}
+	c.locations = append(c.locations, newLoc)
+	c.locationIndex = len(c.locations) - 1
 }
 
 func (c *Compiler) LocationMap() map[int]int {
 	return c.locationMap
+}
+
+func (c *Compiler) mapInstructionToLocation(globalinstructionIndex int, locationIndex int) {
+	if _, ok := c.locationMap[globalinstructionIndex]; ok {
+		panic(fmt.Sprintf("trying to re-add mapping for ins=%d", globalinstructionIndex))
+	}
+	c.locationMap[globalinstructionIndex] = locationIndex
 }
