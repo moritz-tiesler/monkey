@@ -794,7 +794,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 			fmt.Printf("\n")
 		}
 
-		vm := NewWithLocations(comp.Bytecode(), comp.Locations(), comp.LocationMap())
+		vm := NewWithLocations(comp.Bytecode(), comp.LocationMap)
 		step := tt.debugAction(tt.debugFuncInput)
 		vm, err = vm.RunWithCondition(step)
 		if err != nil {
@@ -833,9 +833,8 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 			fmt.Printf("\n")
 		}
 
-		vm := NewWithLocations(comp.Bytecode(), comp.Locations(), comp.LocationMap())
+		vm := NewWithLocations(comp.Bytecode(), comp.LocationMap)
 		vm = tt.prepFunc(vm)
-		vm.currentFrame().ip--
 		step := tt.debugAction(tt.debugFuncInput)
 		vm, err = vm.RunWithCondition(step)
 		if err != nil {
@@ -866,9 +865,10 @@ func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
 
 func runUntilBreakPoint(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
 	return func(vm *VM) (bool, error) {
-		cycleLocation := vm.SourceLocation()
-		cycleLine := cycleLocation.Range.Start.Line
+		nextCycleLocation := vm.SourceLocation()
+		cycleLine := nextCycleLocation.Range.Start.Line
 		if breakOn.Range.Start.Line == cycleLine {
+			vm.currentFrame().ip--
 			return true, nil
 		} else {
 			return false, nil
@@ -937,8 +937,8 @@ let c = 4
 func stepInto(into compiler.LocationData) func(*VM) (bool, error) {
 	startingDepth := into.Depth
 	return func(vm *VM) (bool, error) {
-		//cycleLocation := vm.SourceLocation()
-		cycleDepth := vm.framesIndex - 1
+		cycleLocation := vm.SourceLocation()
+		cycleDepth := cycleLocation.Depth
 		if cycleDepth > startingDepth {
 			return true, nil
 		} else {
@@ -954,8 +954,8 @@ func TestStepInto(t *testing.T) {
 		{
 			input: `
 let func = fn(x) {
-	let y = x + 1
-	return y
+    let y = x + 1
+    return y
 }
 let b = 3
 func(b)
@@ -967,10 +967,10 @@ let c = 5
 					Start: ast.Position{Line: 3, Col: 0},
 					End:   ast.Position{Line: 3, Col: 1}}},
 			expectedLocation: compiler.LocationData{
-				Depth: 0,
+				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 1, Col: 11},
-					End:   ast.Position{Line: 4, Col: 1},
+					Start: ast.Position{Line: 2, Col: 4},
+					End:   ast.Position{Line: 2, Col: 17},
 				},
 			},
 			debugAction: stepInto,

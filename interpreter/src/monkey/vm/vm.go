@@ -45,8 +45,8 @@ type VM struct {
 	frames      []*Frame
 	framesIndex int
 
-	locationData []compiler.LocationData
-	locationMap  map[int]int
+	locationScopes []compiler.LocationScope
+	locationMap    compiler.LocationMap
 }
 
 const MaxFrames = 1024
@@ -78,9 +78,8 @@ func NewWithGlobalStore(bytecode *compiler.Bytecode, s []object.Object) *VM {
 	return vm
 }
 
-func NewWithLocations(bytecode *compiler.Bytecode, ld []compiler.LocationData, lm map[int]int) *VM {
+func NewWithLocations(bytecode *compiler.Bytecode, lm compiler.LocationMap) *VM {
 	vm := New(bytecode)
-	vm.locationData = ld
 	vm.locationMap = lm
 	return vm
 }
@@ -412,23 +411,27 @@ func isTruthy(obj object.Object) bool {
 }
 
 func (vm *VM) SourceLocation() compiler.LocationData {
-	fp := vm.currentFrame().ip
-	locIndex := vm.locationMap[fp]
-	loc := vm.locationData[locIndex]
-	return loc
+	ip := vm.currentFrame().ip
+	for {
+		lk := compiler.LocationKey{ScopeIndex: vm.framesIndex - 1, InstructionIndex: ip}
+		location, ok := vm.locationMap[lk]
+		if ok {
+			return location
+		}
+		ip = ip + 1
+	}
 }
 
 type RunCondition func(*VM) (bool, error)
 
 func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
 	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 {
-		vm.currentFrame().ip++
+		vm.AdvancePointers()
 		stop, err := runCondition(vm)
 		if err != nil {
 			return vm, fmt.Errorf("error when testing condition")
 		}
 		if stop {
-			//vm.currentFrame().ip--
 			return vm, nil
 		} else {
 			err := vm.RunOp()
@@ -439,6 +442,10 @@ func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
 	}
 
 	return vm, nil
+}
+
+func (vm *VM) AdvancePointers() {
+	vm.currentFrame().ip++
 }
 
 func (vm *VM) Cycle() error {

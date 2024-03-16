@@ -13,15 +13,22 @@ type EmittedInstruction struct {
 	Position int
 }
 
-type LocationScope struct {
-	depth     int
-	locations []ast.NodeRange
+type LocationKey struct {
+	ScopeIndex       int
+	InstructionIndex int
 }
+
+type LocationMap map[LocationKey]LocationData
 
 type CompilationScope struct {
 	instructions        code.Instructions
 	lastInstruction     EmittedInstruction
 	previousInstruction EmittedInstruction
+}
+
+type LocationScope struct {
+	Depth     int
+	Locations []LocationData
 }
 
 type Compiler struct {
@@ -30,11 +37,8 @@ type Compiler struct {
 	scopes      []CompilationScope
 	scopeIndex  int
 	// Used for mapping OpCode to source location
-	globalInstructionCounter int
-	scopeDepth               int
-	locationMap              map[int]int
-	locations                []LocationData
-	locationIndex            int
+	scopeDepth  int
+	LocationMap LocationMap
 }
 
 func New() *Compiler {
@@ -55,11 +59,8 @@ func New() *Compiler {
 		scopes:      []CompilationScope{mainScope},
 		scopeIndex:  0,
 
-		globalInstructionCounter: 0,
-		scopeDepth:               0,
-		locationMap:              make(map[int]int),
-		locations:                []LocationData{},
-		locationIndex:            0,
+		scopeDepth:  0,
+		LocationMap: make(map[LocationKey]LocationData),
 	}
 }
 
@@ -81,12 +82,12 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 	case *ast.ExpressionStatement:
-		c.trackNode(node)
 		err := c.Compile(node.Expression)
 		if err != nil {
 			return err
 		}
-		c.emit(code.OpPop)
+		ip := c.emit(code.OpPop)
+		c.mapInstructionToNode(ip, node)
 
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
@@ -147,13 +148,14 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 	case *ast.IfExpression:
-		c.trackNode(node)
 		err := c.Compile(node.Condition)
 		if err != nil {
 			return err
 		}
 		// Emit an `OpJumpNotTruthy` with a bogus value
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
+		c.mapInstructionToNode(jumpNotTruthyPos, node)
+
 		err = c.Compile(node.Consequence)
 		if err != nil {
 			return err
@@ -163,6 +165,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 		// Emit an `OpJump` with a bogus value
 		jumpPos := c.emit(code.OpJump, 9999)
+		c.mapInstructionToNode(jumpPos, node.Consequence)
+
 		afterConsequencePos := len(c.currentInstructions())
 		c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
 
@@ -241,21 +245,21 @@ func (c *Compiler) Compile(node ast.Node) error {
 		c.emit(code.OpIndex)
 
 	case *ast.LetStatement:
+		var ii int
 		symbol := c.symbolTable.Define(node.Name.Value)
-		c.trackNode(node)
 		err := c.Compile(node.Value)
 		if err != nil {
 			return err
 		}
 		if symbol.Scope == GlobalScope {
-			c.emit(code.OpSetGlobal, symbol.Index)
+			ii = c.emit(code.OpSetGlobal, symbol.Index)
 
 		} else {
-			c.emit(code.OpSetLocal, symbol.Index)
+			ii = c.emit(code.OpSetLocal, symbol.Index)
 		}
+		c.mapInstructionToNode(ii, node)
 
 	case *ast.Identifier:
-		//c.trackNode(node)
 		symbol, ok := c.symbolTable.Resolve(node.Value)
 		if !ok {
 			return fmt.Errorf("undefined variable %s", node.Value)
@@ -264,14 +268,12 @@ func (c *Compiler) Compile(node ast.Node) error {
 		c.loadSymbol(symbol)
 
 	case *ast.Boolean:
-		//c.trackNode(node)
 		if node.Value {
 			c.emit(code.OpTrue)
 		} else {
 			c.emit(code.OpFalse)
 		}
 	case *ast.FunctionLiteral:
-		c.trackNode(node)
 		c.enterScope()
 
 		if node.Name != "" {
@@ -282,7 +284,6 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.symbolTable.Define(p.Value)
 		}
 
-		c.trackNode(node.Body)
 		err := c.Compile(node.Body)
 		if err != nil {
 			return err
@@ -310,7 +311,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		fnIndex := c.addConstant(compiledFn)
-		c.emit(code.OpClosure, fnIndex, len(freeSymbols))
+		ii := c.emit(code.OpClosure, fnIndex, len(freeSymbols))
+		c.mapInstructionToNode(ii, node)
 
 	case *ast.ReturnStatement:
 		err := c.Compile(node.ReturnValue)
@@ -320,7 +322,6 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		c.emit(code.OpReturnValue)
 	case *ast.CallExpression:
-		c.trackNode(node)
 		err := c.Compile(node.Function)
 		if err != nil {
 			return err
@@ -333,7 +334,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 			}
 		}
 
-		c.emit(code.OpCall, len(node.Arguments))
+		ii := c.emit(code.OpCall, len(node.Arguments))
+		c.mapInstructionToNode(ii, node)
 	}
 
 	return nil
@@ -411,11 +413,7 @@ func (c *Compiler) addInstruction(ins []byte) int {
 	posNewInstruction := len(c.currentInstructions())
 	updatedInstructions := append(c.currentInstructions(), ins...)
 
-	c.globalInstructionCounter += 1
-
 	c.scopes[c.scopeIndex].instructions = updatedInstructions
-
-	c.mapInstructionToLocation(c.globalInstructionCounter, c.locationIndex)
 
 	return posNewInstruction
 }
@@ -475,28 +473,34 @@ type LocationData struct {
 	Range ast.NodeRange
 }
 
-func (c *Compiler) Locations() []LocationData {
-	return c.locations
-}
+//func (c *Compiler) Locations() []LocationScope {
+//return c.locationScopes
+//}
 
 type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []object.Object
 }
 
-func (c *Compiler) trackNode(node ast.Node) {
+//func (c *Compiler) trackNode(node ast.Node) (int, LocationData) {
+//posNewLocation := len(c.currentLocations())
+//newLoc := LocationData{Depth: c.scopeDepth, Range: node.Range()}
+
+//existingLocations := c.currentLocations()
+//updatedLocations := append(existingLocations, newLoc)
+
+//c.locationScopes[c.scopeIndex].Locations = updatedLocations
+
+//return posNewLocation, newLoc
+//}
+
+//func (c *Compiler) currentLocations() []LocationData {
+//return c.locationScopes[c.scopeIndex].Locations
+//}
+
+func (c *Compiler) mapInstructionToNode(insPos int, node ast.Node) {
 	newLoc := LocationData{Depth: c.scopeDepth, Range: node.Range()}
-	c.locations = append(c.locations, newLoc)
-	c.locationIndex = len(c.locations) - 1
-}
+	key := LocationKey{ScopeIndex: c.scopeIndex, InstructionIndex: insPos}
 
-func (c *Compiler) LocationMap() map[int]int {
-	return c.locationMap
-}
-
-func (c *Compiler) mapInstructionToLocation(globalinstructionIndex int, locationIndex int) {
-	if _, ok := c.locationMap[globalinstructionIndex]; ok {
-		panic(fmt.Sprintf("trying to re-add mapping for ins=%d", globalinstructionIndex))
-	}
-	c.locationMap[globalinstructionIndex] = locationIndex
+	c.LocationMap[key] = newLoc
 }
