@@ -929,6 +929,31 @@ let c = 4
 			},
 			debugAction: runUntilBreakPoint,
 		},
+		{
+			input: `
+let func = fn(a) {
+    let b = a + 1
+	return b
+}
+func(2)
+`,
+
+			debugFuncInput: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 2, Col: 4},
+					End:   ast.Position{Line: 2, Col: 17},
+				},
+			},
+			expectedLocation: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 2, Col: 4},
+					End:   ast.Position{Line: 2, Col: 17},
+				},
+			},
+			debugAction: runUntilBreakPoint,
+		},
 	}
 
 	runVmDebuggingTests(t, tests)
@@ -964,8 +989,8 @@ let c = 5
 			debugFuncInput: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 0},
-					End:   ast.Position{Line: 3, Col: 1}}},
+					Start: ast.Position{Line: 6, Col: 0},
+					End:   ast.Position{Line: 6, Col: 7}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
@@ -980,6 +1005,63 @@ let c = 5
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 6, Col: 0},
 						End:   ast.Position{Line: 6, Col: 7},
+					},
+				}
+				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+		},
+	}
+
+	runVmDebuggingTestsWithPrep(t, tests)
+}
+
+func stepOut(outOf compiler.LocationData) func(*VM) (bool, error) {
+	startingDepth := outOf.Depth
+	return func(vm *VM) (bool, error) {
+		cycleLocation := vm.SourceLocation()
+		cycleDepth := cycleLocation.Depth
+		if cycleDepth < startingDepth {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+
+}
+
+func TestStepOut(t *testing.T) {
+
+	tests := []vmDebuggerTestCaseWithPreparation{
+		{
+			input: `
+let func = fn(x) {
+    let y = x + 1
+    return y
+}
+let b = 3
+func(b)
+let c = 5
+`,
+			debugFuncInput: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 2, Col: 4},
+					End:   ast.Position{Line: 2, Col: 17}}},
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 6, Col: 0},
+					End:   ast.Position{Line: 6, Col: 7},
+				},
+			},
+			debugAction: stepOut,
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 4},
+						End:   ast.Position{Line: 2, Col: 17},
 					},
 				}
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))

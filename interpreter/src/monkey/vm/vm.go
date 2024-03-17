@@ -411,15 +411,24 @@ func isTruthy(obj object.Object) bool {
 }
 
 func (vm *VM) SourceLocation() compiler.LocationData {
+	startingP := vm.currentFrame().ip
 	ip := vm.currentFrame().ip
-	for {
+	var location compiler.LocationData
+	var found bool
+	for ip <= len(vm.frames[vm.framesIndex-1].Instructions()) {
 		lk := compiler.LocationKey{ScopeIndex: vm.framesIndex - 1, InstructionIndex: ip}
-		location, ok := vm.locationMap[lk]
-		if ok {
-			return location
+		location, found = vm.locationMap[lk]
+		if found {
+			break
 		}
 		ip = ip + 1
 	}
+	if found {
+		return location
+	} else {
+		panic(fmt.Sprintf("Could not find location for ins=%d", startingP))
+	}
+
 }
 
 type RunCondition func(*VM) (bool, error)

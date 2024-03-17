@@ -320,7 +320,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 			return err
 		}
 
-		c.emit(code.OpReturnValue)
+		ii := c.emit(code.OpReturnValue)
+		c.mapInstructionToNode(ii, node)
 	case *ast.CallExpression:
 		err := c.Compile(node.Function)
 		if err != nil {
