@@ -995,7 +995,7 @@ squareAndDouble(2)
 				Depth: 1,
 				Range: ast.NodeRange{
 					Start: ast.Position{Line: 2, Col: 4},
-					End:   ast.Position{Line: 2, Col: 16},
+					End:   ast.Position{Line: 2, Col: 12},
 				},
 			},
 			expectedLocation: compiler.LocationData{

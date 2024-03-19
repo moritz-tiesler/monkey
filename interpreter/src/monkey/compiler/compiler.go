@@ -38,8 +38,9 @@ type Compiler struct {
 	scopes      []CompilationScope
 	scopeIndex  int
 	// Used for mapping OpCode to source location
-	scopeDepth  int
-	LocationMap LocationMap
+	scopeDepth    int
+	globalScopeId int
+	LocationMap   LocationMap
 }
 
 func New() *Compiler {
@@ -439,11 +440,10 @@ func (c *Compiler) loadSymbol(s Symbol) {
 }
 
 func (c *Compiler) enterScope() {
-	c.scopeDepth += 1
-	previousScope := c.scopes[c.scopeIndex]
-	newId := previousScope.id + 1
+	c.scopeDepth++
+	c.globalScopeId++
 	scope := CompilationScope{
-		id:                  newId,
+		id:                  c.globalScopeId,
 		instructions:        code.Instructions{},
 		lastInstruction:     EmittedInstruction{},
 		previousInstruction: EmittedInstruction{},
