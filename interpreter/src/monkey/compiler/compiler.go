@@ -14,13 +14,14 @@ type EmittedInstruction struct {
 }
 
 type LocationKey struct {
-	ScopeIndex       int
+	ScopeId          int
 	InstructionIndex int
 }
 
 type LocationMap map[LocationKey]LocationData
 
 type CompilationScope struct {
+	id                  int
 	instructions        code.Instructions
 	lastInstruction     EmittedInstruction
 	previousInstruction EmittedInstruction
@@ -43,6 +44,7 @@ type Compiler struct {
 
 func New() *Compiler {
 	mainScope := CompilationScope{
+		id:                  0,
 		instructions:        code.Instructions{},
 		lastInstruction:     EmittedInstruction{},
 		previousInstruction: EmittedInstruction{},
@@ -87,7 +89,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 			return err
 		}
 		ip := c.emit(code.OpPop)
-		c.mapInstructionToNode(ip, node)
+		c.mapInstructionToNode(c.currenScopeId(), ip, node)
 
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
@@ -154,7 +156,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 		// Emit an `OpJumpNotTruthy` with a bogus value
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
-		c.mapInstructionToNode(jumpNotTruthyPos, node)
+		c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node)
 
 		err = c.Compile(node.Consequence)
 		if err != nil {
@@ -165,7 +167,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 		// Emit an `OpJump` with a bogus value
 		jumpPos := c.emit(code.OpJump, 9999)
-		c.mapInstructionToNode(jumpPos, node.Consequence)
+		c.mapInstructionToNode(c.currenScopeId(), jumpPos, node.Consequence)
 
 		afterConsequencePos := len(c.currentInstructions())
 		c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
@@ -257,7 +259,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		} else {
 			ii = c.emit(code.OpSetLocal, symbol.Index)
 		}
-		c.mapInstructionToNode(ii, node)
+		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
 	case *ast.Identifier:
 		symbol, ok := c.symbolTable.Resolve(node.Value)
@@ -312,7 +314,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		fnIndex := c.addConstant(compiledFn)
 		ii := c.emit(code.OpClosure, fnIndex, len(freeSymbols))
-		c.mapInstructionToNode(ii, node)
+		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
 	case *ast.ReturnStatement:
 		err := c.Compile(node.ReturnValue)
@@ -321,7 +323,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		ii := c.emit(code.OpReturnValue)
-		c.mapInstructionToNode(ii, node)
+		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 	case *ast.CallExpression:
 		err := c.Compile(node.Function)
 		if err != nil {
@@ -336,7 +338,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		ii := c.emit(code.OpCall, len(node.Arguments))
-		c.mapInstructionToNode(ii, node)
+		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 	}
 
 	return nil
@@ -438,7 +440,10 @@ func (c *Compiler) loadSymbol(s Symbol) {
 
 func (c *Compiler) enterScope() {
 	c.scopeDepth += 1
+	previousScope := c.scopes[c.scopeIndex]
+	newId := previousScope.id + 1
 	scope := CompilationScope{
+		id:                  newId,
 		instructions:        code.Instructions{},
 		lastInstruction:     EmittedInstruction{},
 		previousInstruction: EmittedInstruction{},
@@ -499,9 +504,13 @@ type Bytecode struct {
 //return c.locationScopes[c.scopeIndex].Locations
 //}
 
-func (c *Compiler) mapInstructionToNode(insPos int, node ast.Node) {
+func (c *Compiler) mapInstructionToNode(scopeId int, insPos int, node ast.Node) {
 	newLoc := LocationData{Depth: c.scopeDepth, Range: node.Range()}
-	key := LocationKey{ScopeIndex: c.scopeIndex, InstructionIndex: insPos}
+	key := LocationKey{ScopeId: scopeId, InstructionIndex: insPos}
 
 	c.LocationMap[key] = newLoc
+}
+
+func (c *Compiler) currenScopeId() int {
+	return c.scopes[c.scopeIndex].id
 }

@@ -1073,17 +1073,17 @@ func TestRecursiveFunctions(t *testing.T) {
 
 type rangeTest struct {
 	input             string
-	expectedLocations []LocationScope
+	expectedLocations LocationMap
 }
 
 func LocationScopesFromMap(locs map[LocationKey]LocationData) []LocationScope {
 	scopes := []LocationScope{}
 	for k, v := range locs {
-		if len(scopes) == 0 || k.ScopeIndex >= len(scopes) {
+		if len(scopes) == 0 || k.ScopeId >= len(scopes) {
 			newScope := LocationScope{Depth: 0, Locations: []LocationData{}}
 			scopes = append(scopes, newScope)
 		}
-		scopes[k.ScopeIndex].Locations = append(scopes[k.ScopeIndex].Locations, v)
+		scopes[k.ScopeId].Locations = append(scopes[k.ScopeId].Locations, v)
 	}
 	return scopes
 }
@@ -1098,18 +1098,16 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 			t.Fatalf("compiler error: %s", err)
 		}
 		bytecode := compiler.Bytecode()
-		scopes := LocationScopesFromMap(compiler.LocationMap)
 
-		for i, s := range scopes {
-			for j, _ := range s.Locations {
-				key := LocationKey{i, j}
-				acutalLoc := compiler.LocationMap[key]
-				expectedLoc := tt.expectedLocations[i].Locations[j]
-				if acutalLoc != expectedLoc {
-					t.Errorf("wrong location for instruction\n%s: expected=%v, got=%v", bytecode.Instructions.String(), expectedLoc, acutalLoc)
-				}
+		for k, expected := range tt.expectedLocations {
+			actual, ok := compiler.LocationMap[k]
+			if !ok {
+				t.Logf("\n%s", compiler.Bytecode().Instructions.String())
+				t.Fatalf("cannot get value for key=%v", k)
 			}
-
+			if actual != expected {
+				t.Errorf("wrong location for instruction\n%s: expected=%v, got=%v", bytecode.Instructions.String(), expected, actual)
+			}
 		}
 
 		if err != nil {
@@ -1124,105 +1122,70 @@ func TestRanges(t *testing.T) {
 			input: `
 let a = 2
 `,
-			expectedLocations: []LocationScope{
-				{
+			expectedLocations: map[LocationKey]LocationData{
+				LocationKey{0, 3}: LocationData{
 					Depth: 0,
-					Locations: []LocationData{
-						{
-							Depth: 0,
-							Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
-						},
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 1, Col: 0},
+						End:   ast.Position{Line: 1, Col: 9},
+					},
+				},
+			},
+		},
+		{
+			input: `
+let func = fn(a) {
+    let b = 2 * a
+	return b
+}
+func(2)
+`,
+			expectedLocations: map[LocationKey]LocationData{
+				LocationKey{0, 0}: LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 1, Col: 11},
+						End:   ast.Position{Line: 4, Col: 1},
+					},
+				},
+				LocationKey{0, 4}: LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 1, Col: 0},
+						End:   ast.Position{Line: 4, Col: 1},
+					},
+				},
+				LocationKey{1, 6}: LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 4},
+						End:   ast.Position{Line: 2, Col: 17},
+					},
+				},
+				LocationKey{1, 10}: LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 8},
+						End:   ast.Position{Line: 3, Col: 9},
+					},
+				},
+				LocationKey{0, 13}: LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 0},
+						End:   ast.Position{Line: 5, Col: 7},
+					},
+				},
+				LocationKey{0, 15}: LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 0},
+						End:   ast.Position{Line: 5, Col: 7},
 					},
 				},
 			},
 		},
 	}
-	//{
-	//`
-	//if (true) {
-	//1
-	//} else {
-	//2
-	//}
-	//`,
-	//[]LocationData{
-	//LocationData{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 5, Col: 1}},
-	//},
-	//LocationData{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 5, Col: 1}},
-	//},
-	//LocationData{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 5}},
-	//},
-	//LocationData{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 4}, End: ast.Position{Line: 4, Col: 5}},
-	//},
-	//},
-	//},
-	//{
-	//`
-	//let func = fn(a) {let res = a * 2;}
-	//`,
-	//[]LocationData{
-	//{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 35}},
-	//},
-	//{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 1, Col: 35}},
-	//},
-	//{
-	//Depth: 1,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 17}, End: ast.Position{Line: 1, Col: 35}},
-	//},
-	//{
-	//Depth: 1,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 18}, End: ast.Position{Line: 1, Col: 34}},
-	//},
-	//},
-	//},
-	//{
-	//`
-	//let func = fn(a) {
-	//let b = 3
-	//}
-	//func(1)
-	//`,
-	//[]LocationData{
-	//{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 3, Col: 1}},
-	//},
-	//{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 11}, End: ast.Position{Line: 3, Col: 1}},
-	//},
-	//{
-	//Depth: 1,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 1, Col: 17}, End: ast.Position{Line: 3, Col: 1}},
-	//},
-	//{
-	//Depth: 1,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 13}},
-	//},
-
-	//{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
-	//},
-	//{
-	//Depth: 0,
-	//Range: ast.NodeRange{Start: ast.Position{Line: 4, Col: 0}, End: ast.Position{Line: 4, Col: 7}},
-	//},
-	//},
-	//},
-	//},
 
 	runRangeTests(t, tests)
 

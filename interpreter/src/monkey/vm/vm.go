@@ -16,14 +16,14 @@ var Null = &object.Null{}
 
 type Frame struct {
 	cl          *object.Closure
-	ip          int
+	Ip          int
 	basePointer int
 }
 
 func NewFrame(cl *object.Closure, basePointer int) *Frame {
 	f := &Frame{
 		cl:          cl,
-		ip:          -1,
+		Ip:          -1,
 		basePointer: basePointer,
 	}
 
@@ -44,9 +44,9 @@ type VM struct {
 
 	frames      []*Frame
 	framesIndex int
+	callDepth   int
 
-	locationScopes []compiler.LocationScope
-	locationMap    compiler.LocationMap
+	LocationMap compiler.LocationMap
 }
 
 const MaxFrames = 1024
@@ -69,6 +69,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 
 		frames:      frames,
 		framesIndex: 1,
+		callDepth:   0,
 	}
 }
 
@@ -80,20 +81,22 @@ func NewWithGlobalStore(bytecode *compiler.Bytecode, s []object.Object) *VM {
 
 func NewWithLocations(bytecode *compiler.Bytecode, lm compiler.LocationMap) *VM {
 	vm := New(bytecode)
-	vm.locationMap = lm
+	vm.LocationMap = lm
 	return vm
 }
 
-func (vm *VM) currentFrame() *Frame {
+func (vm *VM) CurrentFrame() *Frame {
 	return vm.frames[vm.framesIndex-1]
 }
 
 func (vm *VM) pushFrame(f *Frame) {
+	vm.callDepth++
 	vm.frames[vm.framesIndex] = f
 	vm.framesIndex++
 }
 
 func (vm *VM) popFrame() *Frame {
+	vm.callDepth--
 	vm.framesIndex--
 	return vm.frames[vm.framesIndex]
 }
@@ -108,7 +111,7 @@ func (vm *VM) StackTop() object.Object {
 
 func (vm *VM) Run() error {
 
-	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 {
+	for vm.CurrentFrame().Ip < len(vm.CurrentFrame().Instructions())-1 {
 		err := vm.Cycle()
 		if err != nil {
 			return err
@@ -411,13 +414,14 @@ func isTruthy(obj object.Object) bool {
 }
 
 func (vm *VM) SourceLocation() compiler.LocationData {
-	startingP := vm.currentFrame().ip
-	ip := vm.currentFrame().ip
+	startingP := vm.CurrentFrame().Ip
+	ip := vm.CurrentFrame().Ip
 	var location compiler.LocationData
 	var found bool
+	var lk compiler.LocationKey
 	for ip <= len(vm.frames[vm.framesIndex-1].Instructions()) {
-		lk := compiler.LocationKey{ScopeIndex: vm.framesIndex - 1, InstructionIndex: ip}
-		location, found = vm.locationMap[lk]
+		lk = compiler.LocationKey{ScopeId: vm.framesIndex - 1, InstructionIndex: ip}
+		location, found = vm.LocationMap[lk]
 		if found {
 			break
 		}
@@ -434,7 +438,7 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 type RunCondition func(*VM) (bool, error)
 
 func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
-	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 {
+	for vm.CurrentFrame().Ip < len(vm.CurrentFrame().Instructions())-1 {
 		vm.AdvancePointers()
 		stop, err := runCondition(vm)
 		if err != nil {
@@ -454,12 +458,12 @@ func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
 }
 
 func (vm *VM) AdvancePointers() {
-	vm.currentFrame().ip++
+	vm.CurrentFrame().Ip++
 }
 
 func (vm *VM) Cycle() error {
 
-	vm.currentFrame().ip++
+	vm.CurrentFrame().Ip++
 
 	err := vm.RunOp()
 	if err != nil {
@@ -470,13 +474,13 @@ func (vm *VM) Cycle() error {
 }
 
 func (vm *VM) RunOp() error {
-	ip := vm.currentFrame().ip
-	ins := vm.currentFrame().Instructions()
+	ip := vm.CurrentFrame().Ip
+	ins := vm.CurrentFrame().Instructions()
 	op := code.Opcode(ins[ip])
 	switch op {
 	case code.OpConstant:
 		constIndex := code.ReadUint16(ins[ip+1:])
-		vm.currentFrame().ip += 2
+		vm.CurrentFrame().Ip += 2
 		err := vm.push(vm.constants[constIndex])
 		if err != nil {
 			return err
@@ -484,12 +488,12 @@ func (vm *VM) RunOp() error {
 
 	case code.OpSetGlobal:
 		globalIndex := code.ReadUint16(ins[ip+1:])
-		vm.currentFrame().ip += 2
+		vm.CurrentFrame().Ip += 2
 		vm.globals[globalIndex] = vm.pop()
 
 	case code.OpGetGlobal:
 		globalIndex := code.ReadUint16(ins[ip+1:])
-		vm.currentFrame().ip += 2
+		vm.CurrentFrame().Ip += 2
 		err := vm.push(vm.globals[globalIndex])
 		if err != nil {
 			return err
@@ -536,14 +540,14 @@ func (vm *VM) RunOp() error {
 
 	case code.OpJump:
 		pos := int(code.ReadUint16(ins[ip+1:]))
-		vm.currentFrame().ip = pos - 1
+		vm.CurrentFrame().Ip = pos - 1
 
 	case code.OpJumpNotTruthy:
 		pos := int(code.ReadUint16(ins[ip+1:]))
-		vm.currentFrame().ip += 2
+		vm.CurrentFrame().Ip += 2
 		condition := vm.pop()
 		if !isTruthy(condition) {
-			vm.currentFrame().ip = pos - 1
+			vm.CurrentFrame().Ip = pos - 1
 		}
 
 	case code.OpNull:
@@ -553,7 +557,7 @@ func (vm *VM) RunOp() error {
 		}
 	case code.OpArray:
 		numElements := int(code.ReadUint16(ins[ip+1:]))
-		vm.currentFrame().ip += 2
+		vm.CurrentFrame().Ip += 2
 		array := vm.buildArray(vm.sp-numElements, vm.sp)
 		vm.sp -= numElements
 
@@ -564,7 +568,7 @@ func (vm *VM) RunOp() error {
 
 	case code.OpHash:
 		numElements := int(code.ReadUint16(ins[ip+1:]))
-		vm.currentFrame().ip += 2
+		vm.CurrentFrame().Ip += 2
 
 		hash, err := vm.buildHash(vm.sp-numElements, vm.sp)
 		if err != nil {
@@ -587,17 +591,17 @@ func (vm *VM) RunOp() error {
 
 	case code.OpSetLocal:
 		localIndex := code.ReadUint8(ins[ip+1:])
-		vm.currentFrame().ip += 1
+		vm.CurrentFrame().Ip += 1
 
-		frame := vm.currentFrame()
+		frame := vm.CurrentFrame()
 
 		vm.stack[frame.basePointer+int(localIndex)] = vm.pop()
 
 	case code.OpGetLocal:
 		localIndex := code.ReadUint8(ins[ip+1:])
-		vm.currentFrame().ip += 1
+		vm.CurrentFrame().Ip += 1
 
-		frame := vm.currentFrame()
+		frame := vm.CurrentFrame()
 
 		err := vm.push(vm.stack[frame.basePointer+int(localIndex)])
 		if err != nil {
@@ -606,7 +610,7 @@ func (vm *VM) RunOp() error {
 
 	case code.OpCall:
 		numArgs := code.ReadUint8(ins[ip+1:])
-		vm.currentFrame().ip += 1
+		vm.CurrentFrame().Ip += 1
 
 		err := vm.executeCall(int(numArgs))
 		if err != nil {
@@ -634,7 +638,7 @@ func (vm *VM) RunOp() error {
 		}
 	case code.OpGetBuiltin:
 		builinIndex := code.ReadUint8(ins[ip+1:])
-		vm.currentFrame().ip += 1
+		vm.CurrentFrame().Ip += 1
 
 		definition := object.Builtins[builinIndex]
 
@@ -646,7 +650,7 @@ func (vm *VM) RunOp() error {
 	case code.OpClosure:
 		constIndex := code.ReadUint16(ins[ip+1:])
 		numFree := code.ReadUint8(ins[ip+3:])
-		vm.currentFrame().ip += 3
+		vm.CurrentFrame().Ip += 3
 
 		err := vm.pushClosure(int(constIndex), int(numFree))
 		if err != nil {
@@ -655,16 +659,16 @@ func (vm *VM) RunOp() error {
 
 	case code.OpGetFree:
 		freeIndex := code.ReadUint8(ins[ip+1:])
-		vm.currentFrame().ip += 1
+		vm.CurrentFrame().Ip += 1
 
-		currentClosure := vm.currentFrame().cl
+		currentClosure := vm.CurrentFrame().cl
 
 		err := vm.push(currentClosure.Free[freeIndex])
 		if err != nil {
 			return err
 		}
 	case code.OpCurrentClosure:
-		currentClosure := vm.currentFrame().cl
+		currentClosure := vm.CurrentFrame().cl
 		err := vm.push(currentClosure)
 		if err != nil {
 			return err
