@@ -20,6 +20,10 @@ type Frame struct {
 	basePointer int
 }
 
+func (f *Frame) Closure() *object.Closure {
+	return f.cl
+}
+
 func NewFrame(cl *object.Closure, basePointer int) *Frame {
 	f := &Frame{
 		cl:          cl,
