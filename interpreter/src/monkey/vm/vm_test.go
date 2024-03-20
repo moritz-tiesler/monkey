@@ -794,7 +794,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 			fmt.Printf("\n")
 		}
 
-		vm := NewWithLocations(comp.Bytecode(), comp.LocationMap)
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
 		step := tt.debugAction(tt.debugFuncInput)
 		vm, err = vm.RunWithCondition(step)
 		if err != nil {
@@ -833,7 +833,7 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 			fmt.Printf("\n")
 		}
 
-		vm := NewWithLocations(comp.Bytecode(), comp.LocationMap)
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
 		vm = tt.prepFunc(vm)
 		step := tt.debugAction(vm, tt.debugFuncInput)
 		vm, err = vm.RunWithCondition(step)
@@ -994,7 +994,7 @@ squareAndDouble(2)
 			debugFuncInput: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 4},
+					Start: ast.Position{Line: 2, Col: 11},
 					End:   ast.Position{Line: 2, Col: 12},
 				},
 			},

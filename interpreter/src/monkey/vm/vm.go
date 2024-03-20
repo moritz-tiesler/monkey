@@ -85,9 +85,35 @@ func NewWithLocations(bytecode *compiler.Bytecode, lm compiler.LocationMap) *VM 
 	return vm
 }
 
+func NewFromMain(mainFn *object.CompiledFunction, bytecode *compiler.Bytecode, locationMap compiler.LocationMap) *VM {
+
+	mainClosure := &object.Closure{Fn: mainFn}
+
+	mainFrame := NewFrame(mainClosure, 0)
+
+	frames := make([]*Frame, MaxFrames)
+	frames[0] = mainFrame
+
+	return &VM{
+		constants: bytecode.Constants,
+
+		stack: make([]object.Object, StackSize),
+		sp:    0,
+
+		globals: make([]object.Object, GlobalsSize),
+
+		frames:      frames,
+		framesIndex: 1,
+		callDepth:   0,
+		LocationMap: locationMap,
+	}
+}
+
 func (vm *VM) CurrentFrame() *Frame {
 	return vm.frames[vm.framesIndex-1]
 }
+
+//TODO: count how many frames have been pushed during run time to line up with scope ids
 
 func (vm *VM) pushFrame(f *Frame) {
 	vm.callDepth++
@@ -420,7 +446,8 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 	var found bool
 	var lk compiler.LocationKey
 	for ip <= len(vm.frames[vm.framesIndex-1].Instructions()) {
-		lk = compiler.LocationKey{ScopeId: vm.framesIndex - 1, InstructionIndex: ip}
+		scopeId := vm.CurrentFrame().cl.Fn
+		lk = compiler.LocationKey{ScopeId: scopeId, InstructionIndex: ip}
 		location, found = vm.LocationMap[lk]
 		if found {
 			break

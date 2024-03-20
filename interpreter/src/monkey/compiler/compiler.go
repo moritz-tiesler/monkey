@@ -14,14 +14,23 @@ type EmittedInstruction struct {
 }
 
 type LocationKey struct {
-	ScopeId          int
+	ScopeId          *object.CompiledFunction
 	InstructionIndex int
 }
 
 type LocationMap map[LocationKey]LocationData
 
+func (lm LocationMap) Locations() []LocationData {
+	locs := make([]LocationData, 0, len(lm))
+	for _, v := range lm {
+		locs = append(locs, v)
+	}
+	return locs
+
+}
+
 type CompilationScope struct {
-	id                  int
+	scopeId             *object.CompiledFunction
 	instructions        code.Instructions
 	lastInstruction     EmittedInstruction
 	previousInstruction EmittedInstruction
@@ -38,14 +47,14 @@ type Compiler struct {
 	scopes      []CompilationScope
 	scopeIndex  int
 	// Used for mapping OpCode to source location
-	scopeDepth    int
-	globalScopeId int
-	LocationMap   LocationMap
+	scopeDepth  int
+	LocationMap LocationMap
 }
 
 func New() *Compiler {
+	mainFn := &object.CompiledFunction{}
 	mainScope := CompilationScope{
-		id:                  0,
+		scopeId:             mainFn,
 		instructions:        code.Instructions{},
 		lastInstruction:     EmittedInstruction{},
 		previousInstruction: EmittedInstruction{},
@@ -283,6 +292,9 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.symbolTable.DefineFunctionName(node.Name)
 		}
 
+		compiledFn := &object.CompiledFunction{}
+		c.scopes[c.scopeIndex].scopeId = compiledFn
+
 		for _, p := range node.Parameters {
 			c.symbolTable.Define(p.Value)
 		}
@@ -301,16 +313,13 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		freeSymbols := c.symbolTable.FreeSymbols
 		numLocals := c.symbolTable.numDefinitions
+		compiledFn.NumLocals = numLocals
+		compiledFn.NumParameters = len(node.Parameters)
 
 		instructions := c.leaveScope()
+		compiledFn.Instructions = instructions
 		for _, s := range freeSymbols {
 			c.loadSymbol(s)
-		}
-
-		compiledFn := &object.CompiledFunction{
-			Instructions:  instructions,
-			NumLocals:     numLocals,
-			NumParameters: len(node.Parameters),
 		}
 
 		fnIndex := c.addConstant(compiledFn)
@@ -441,9 +450,8 @@ func (c *Compiler) loadSymbol(s Symbol) {
 
 func (c *Compiler) enterScope() {
 	c.scopeDepth++
-	c.globalScopeId++
 	scope := CompilationScope{
-		id:                  c.globalScopeId,
+		scopeId:             nil,
 		instructions:        code.Instructions{},
 		lastInstruction:     EmittedInstruction{},
 		previousInstruction: EmittedInstruction{},
@@ -472,6 +480,15 @@ func (c *Compiler) Bytecode() *Bytecode {
 		Instructions: c.currentInstructions(),
 		Constants:    c.constants,
 	}
+}
+
+func (c *Compiler) MainFn() *object.CompiledFunction {
+	if c.scopeIndex != 0 {
+		panic("Scope index does not point to main scope. Did compilation finish without errors?")
+	}
+	mainFn := c.scopes[c.scopeIndex].scopeId
+	mainFn.Instructions = c.Bytecode().Instructions
+	return mainFn
 }
 
 type LocationData struct {
@@ -504,13 +521,18 @@ type Bytecode struct {
 //return c.locationScopes[c.scopeIndex].Locations
 //}
 
-func (c *Compiler) mapInstructionToNode(scopeId int, insPos int, node ast.Node) {
+func (c *Compiler) mapInstructionToNode(scopeId *object.CompiledFunction, insPos int, node ast.Node) {
 	newLoc := LocationData{Depth: c.scopeDepth, Range: node.Range()}
 	key := LocationKey{ScopeId: scopeId, InstructionIndex: insPos}
 
 	c.LocationMap[key] = newLoc
 }
 
-func (c *Compiler) currenScopeId() int {
-	return c.scopes[c.scopeIndex].id
+func (c *Compiler) currenScopeId() *object.CompiledFunction {
+	id := c.scopes[c.scopeIndex].scopeId
+	if id == nil {
+		panic(fmt.Sprintf("Invalid id: scopeIndex=%d, scopeId=%v", c.scopeIndex, id))
+	}
+	return c.scopes[c.scopeIndex].scopeId
+
 }

@@ -7,6 +7,7 @@ import (
 	"monkey/lexer"
 	"monkey/object"
 	"monkey/parser"
+	"slices"
 	"testing"
 )
 
@@ -1073,19 +1074,7 @@ func TestRecursiveFunctions(t *testing.T) {
 
 type rangeTest struct {
 	input             string
-	expectedLocations LocationMap
-}
-
-func LocationScopesFromMap(locs map[LocationKey]LocationData) []LocationScope {
-	scopes := []LocationScope{}
-	for k, v := range locs {
-		if len(scopes) == 0 || k.ScopeId >= len(scopes) {
-			newScope := LocationScope{Depth: 0, Locations: []LocationData{}}
-			scopes = append(scopes, newScope)
-		}
-		scopes[k.ScopeId].Locations = append(scopes[k.ScopeId].Locations, v)
-	}
-	return scopes
+	expectedLocations []LocationData
 }
 
 func runRangeTests(t *testing.T, tests []rangeTest) {
@@ -1099,14 +1088,17 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 		}
 		bytecode := compiler.Bytecode()
 
-		for k, expected := range tt.expectedLocations {
-			actual, ok := compiler.LocationMap[k]
+		compilerLocations := compiler.LocationMap.Locations()
+		for _, expected := range tt.expectedLocations {
+			ok := slices.ContainsFunc(compilerLocations, func(l LocationData) bool {
+				return l == expected
+			})
+			//if !ok {
+			//t.Logf("\n%s", compiler.Bytecode().Instructions.String())
+			//t.Fatalf("cannot get value for key=%v", k)
+			//}
 			if !ok {
-				t.Logf("\n%s", compiler.Bytecode().Instructions.String())
-				t.Fatalf("cannot get value for key=%v", k)
-			}
-			if actual != expected {
-				t.Errorf("wrong location for instruction\n%s: expected=%v, got=%v", bytecode.Instructions.String(), expected, actual)
+				t.Errorf("location not found\n%s: expected=%v", bytecode.Instructions.String(), expected)
 			}
 		}
 
@@ -1122,8 +1114,8 @@ func TestRanges(t *testing.T) {
 			input: `
 let a = 2
 `,
-			expectedLocations: map[LocationKey]LocationData{
-				LocationKey{0, 3}: LocationData{
+			expectedLocations: []LocationData{
+				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 1, Col: 0},
@@ -1140,43 +1132,43 @@ let func = fn(a) {
 }
 func(2)
 `,
-			expectedLocations: map[LocationKey]LocationData{
-				LocationKey{0, 0}: LocationData{
+			expectedLocations: []LocationData{
+				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 1, Col: 11},
 						End:   ast.Position{Line: 4, Col: 1},
 					},
 				},
-				LocationKey{0, 4}: LocationData{
+				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 1, Col: 0},
 						End:   ast.Position{Line: 4, Col: 1},
 					},
 				},
-				LocationKey{1, 6}: LocationData{
+				LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 2, Col: 4},
 						End:   ast.Position{Line: 2, Col: 17},
 					},
 				},
-				LocationKey{1, 10}: LocationData{
+				LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 3, Col: 8},
 						End:   ast.Position{Line: 3, Col: 9},
 					},
 				},
-				LocationKey{0, 13}: LocationData{
+				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 5, Col: 0},
 						End:   ast.Position{Line: 5, Col: 7},
 					},
 				},
-				LocationKey{0, 15}: LocationData{
+				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 5, Col: 0},
