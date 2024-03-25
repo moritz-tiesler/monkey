@@ -760,7 +760,7 @@ type vmDebuggerTestCase struct {
 	debugFuncInput   compiler.LocationData
 	expectedLocation compiler.LocationData
 	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
-	running          bool
+	vmState          State
 }
 
 type vmDebuggerTestCaseWithPreparation struct {
@@ -769,7 +769,7 @@ type vmDebuggerTestCaseWithPreparation struct {
 	prepFunc         func(*VM) *VM
 	expectedLocation compiler.LocationData
 	debugAction      func(*VM, compiler.LocationData) func(*VM) (bool, error)
-	running          bool
+	vmState          State
 }
 
 func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
@@ -804,7 +804,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 		}
 		// stackElem := vm.LastPoppedStackElem()
 		var expected compiler.LocationData
-		if vm.Running() {
+		if vm.State() == STOPPED {
 			expected = tt.expectedLocation
 		} else {
 			expected = compiler.LocationData{}
@@ -814,9 +814,9 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
 		}
 
-		if vm.Running() != tt.running {
+		if vm.State() != tt.vmState {
 
-			t.Errorf("expected running=%v, got=%v", tt.running, vm.Running())
+			t.Errorf("expected running=%v, got=%v", tt.vmState, vm.State())
 		}
 
 	}
@@ -859,9 +859,9 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
 		}
 
-		if vm.Running() != tt.running {
+		if vm.State() != tt.vmState {
 
-			t.Errorf("expected running=%v, got=%v", tt.running, vm.Running())
+			t.Errorf("expected running=%v, got=%v", tt.vmState, vm.State())
 		}
 
 	}
@@ -884,7 +884,7 @@ func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
 
 func runUntilBreakPoint(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
 	return func(vm *VM) (bool, error) {
-		if !vm.Running() {
+		if vm.State() == DONE {
 			return true, nil
 		}
 		nextCycleLocation := vm.SourceLocation()
@@ -921,7 +921,7 @@ let c = 4
 				},
 			},
 			debugAction: stepOver,
-			running:     true,
+			vmState:     STOPPED,
 		},
 	}
 
@@ -955,7 +955,7 @@ let x = 2
 				},
 			},
 			debugAction: runUntilBreakPoint,
-			running:     false,
+			vmState:     DONE,
 		},
 		{
 			input: `
@@ -977,7 +977,7 @@ let c = 4
 				},
 			},
 			debugAction: runUntilBreakPoint,
-			running:     true,
+			vmState:     STOPPED,
 		},
 		{
 			input: `
@@ -1003,7 +1003,7 @@ func(2)
 				},
 			},
 			debugAction: runUntilBreakPoint,
-			running:     true,
+			vmState:     STOPPED,
 		},
 		{
 			input: `
@@ -1029,7 +1029,7 @@ func(2)
 				},
 			},
 			debugAction: runUntilBreakPoint,
-			running:     true,
+			vmState:     STOPPED,
 		},
 		{
 			input: `
@@ -1058,7 +1058,7 @@ squareAndDouble(2)
 				},
 			},
 			debugAction: runUntilBreakPoint,
-			running:     true,
+			vmState:     STOPPED,
 		},
 	}
 
@@ -1115,7 +1115,7 @@ let c = 5
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
 				return vm
 			},
-			running: true,
+			vmState: STOPPED,
 		},
 	}
 
@@ -1172,7 +1172,7 @@ let c = 5
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
 				return vm
 			},
-			running: true,
+			vmState: STOPPED,
 		},
 	}
 
