@@ -803,8 +803,14 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 			t.Fatalf("vm error: %s", err)
 		}
 		// stackElem := vm.LastPoppedStackElem()
+		var expected compiler.LocationData
+		if vm.Running() {
+			expected = tt.expectedLocation
+		} else {
+			expected = compiler.LocationData{}
+		}
 		currentLocation := vm.SourceLocation()
-		if currentLocation != tt.expectedLocation {
+		if currentLocation != expected {
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
 		}
 
@@ -878,6 +884,9 @@ func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
 
 func runUntilBreakPoint(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
 	return func(vm *VM) (bool, error) {
+		if !vm.Running() {
+			return true, nil
+		}
 		nextCycleLocation := vm.SourceLocation()
 		cycleLine := nextCycleLocation.Range.Start.Line
 		if breakOn.Range.Start.Line == cycleLine {
@@ -922,6 +931,32 @@ let c = 4
 func TestBreakPoints(t *testing.T) {
 
 	tests := []vmDebuggerTestCase{
+		{
+			input: `
+let func = fn(a) {
+    let b = a + 1
+    return b
+}
+let x = 2
+`,
+
+			debugFuncInput: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 4},
+					End:   ast.Position{Line: 3, Col: 11},
+				},
+			},
+			expectedLocation: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 11},
+					End:   ast.Position{Line: 3, Col: 12},
+				},
+			},
+			debugAction: runUntilBreakPoint,
+			running:     false,
+		},
 		{
 			input: `
 let a = 2

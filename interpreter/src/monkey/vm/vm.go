@@ -442,6 +442,9 @@ func isTruthy(obj object.Object) bool {
 }
 
 func (vm *VM) SourceLocation() compiler.LocationData {
+	if !vm.Running() {
+		return compiler.LocationData{}
+	}
 	startingP := vm.CurrentFrame().Ip
 	ip := vm.CurrentFrame().Ip
 	var location compiler.LocationData
@@ -715,6 +718,7 @@ func (vm VM) Running() bool {
 
 	mainFrame := vm.frames[0]
 	mainIp := mainFrame.Ip
-	return mainIp <= len(mainFrame.Instructions())
+	mainIns := mainFrame.Instructions()
+	return mainIp < len(mainIns)-1
 
 }
