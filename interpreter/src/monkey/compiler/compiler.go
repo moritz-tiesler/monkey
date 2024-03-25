@@ -206,7 +206,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 	case *ast.IntegerLiteral:
 		integer := &object.Integer{Value: node.Value}
-		c.emit(code.OpConstant, c.addConstant(integer))
+		pos := c.emit(code.OpConstant, c.addConstant(integer))
+		c.mapInstructionToNode(c.currenScopeId(), pos, node)
 
 	case *ast.StringLiteral:
 		str := &object.String{Value: node.Value}

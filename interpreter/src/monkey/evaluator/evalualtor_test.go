@@ -242,7 +242,7 @@ func TestErrorHandling(t *testing.T) {
 		},
 		{
 			"foobar",
-			"Error at line 0 col 0, identifier not found: foobar",
+			"Error at line 1 col 1, identifier not found: foobar",
 		},
 		{
 			`"Hello" - "World"`,

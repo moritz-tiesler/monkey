@@ -1070,9 +1070,9 @@ func TestLetStatementRanges(t *testing.T) {
 	}{
 		{
 			"let x = 5;",
-			ast.NodeRange{Start: ast.Position{Line: 0, Col: 0}, End: ast.Position{Line: 0, Col: 10}},
-			ast.NodeRange{Start: ast.Position{Line: 0, Col: 4}, End: ast.Position{Line: 0, Col: 5}},
-			ast.NodeRange{Start: ast.Position{Line: 0, Col: 8}, End: ast.Position{Line: 0, Col: 9}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 11}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 5}, End: ast.Position{Line: 1, Col: 6}},
+			ast.NodeRange{Start: ast.Position{Line: 1, Col: 9}, End: ast.Position{Line: 1, Col: 10}},
 		},
 	}
 	for _, tt := range tests {
@@ -1121,10 +1121,10 @@ if (a == true) {
 	b
 }`,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 5, Col: 1}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 4}, End: ast.Position{Line: 1, Col: 13}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 15}, End: ast.Position{Line: 3, Col: 1}},
-			ast.NodeRange{Start: ast.Position{Line: 3, Col: 6}, End: ast.Position{Line: 5, Col: 1}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 6, Col: 2}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 5}, End: ast.Position{Line: 2, Col: 14}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 16}, End: ast.Position{Line: 4, Col: 2}},
+			ast.NodeRange{Start: ast.Position{Line: 4, Col: 7}, End: ast.Position{Line: 6, Col: 2}},
 		},
 	}
 	for _, tt := range tests {
@@ -1173,9 +1173,9 @@ fn(a, b) {
     return c
 }`,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 4, Col: 1}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 3}, End: ast.Position{Line: 1, Col: 7}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 9}, End: ast.Position{Line: 4, Col: 1}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 5, Col: 2}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 4}, End: ast.Position{Line: 2, Col: 8}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 10}, End: ast.Position{Line: 5, Col: 2}},
 		},
 	}
 	for _, tt := range tests {
@@ -1219,7 +1219,7 @@ func TestArrayLiteralRanges(t *testing.T) {
 [1, true, a + b]
 `,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 16}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 17}},
 		},
 	}
 	for _, tt := range tests {
@@ -1252,8 +1252,8 @@ func TestHashLiteralRanges(t *testing.T) {
 {1:a, 2:true, "a":a + b}
 `,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 24}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 1}, End: ast.Position{Line: 1, Col: 23}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 25}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 2}, End: ast.Position{Line: 2, Col: 24}},
 		},
 	}
 	for _, tt := range tests {
@@ -1294,8 +1294,8 @@ func TestCallExpressionRanges(t *testing.T) {
 func(a, b, c)
 `,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 13}},
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 4}, End: ast.Position{Line: 1, Col: 13}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 14}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 5}, End: ast.Position{Line: 2, Col: 14}},
 		},
 	}
 	for _, tt := range tests {
@@ -1327,14 +1327,14 @@ func TestInfixExpressionRanges(t *testing.T) {
 1 + 1
 `,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 5}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 6}},
 		},
 		{
 			`
 1 + 2 * 2
 `,
 
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 9}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 10}},
 		},
 	}
 	for _, tt := range tests {
@@ -1365,13 +1365,13 @@ func TestPrefixExpressionRanges(t *testing.T) {
 			`
 !true
 `,
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 5}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 6}},
 		},
 		{
 			`
 !(a == b)
 `,
-			ast.NodeRange{Start: ast.Position{Line: 1, Col: 0}, End: ast.Position{Line: 1, Col: 8}},
+			ast.NodeRange{Start: ast.Position{Line: 2, Col: 1}, End: ast.Position{Line: 2, Col: 9}},
 		},
 	}
 	for _, tt := range tests {

@@ -910,14 +910,14 @@ let c = 4
 			debugFuncInput: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 1, Col: 0},
-					End:   ast.Position{Line: 1, Col: 9}}},
+					Start: ast.Position{Line: 2, Col: 1},
+					End:   ast.Position{Line: 2, Col: 10}}},
 
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 0},
-					End:   ast.Position{Line: 2, Col: 9},
+					Start: ast.Position{Line: 3, Col: 9},
+					End:   ast.Position{Line: 3, Col: 10},
 				},
 			},
 			debugAction: stepOver,
@@ -967,39 +967,13 @@ let c = 4
 			debugFuncInput: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 0},
-					End:   ast.Position{Line: 3, Col: 1}}},
+					Start: ast.Position{Line: 4, Col: 1},
+					End:   ast.Position{Line: 4, Col: 2}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 0},
-					End:   ast.Position{Line: 3, Col: 1},
-				},
-			},
-			debugAction: runUntilBreakPoint,
-			running:     true,
-		},
-		{
-			input: `
-let func = fn(a) {
-    let b = a + 1
-	return b
-}
-func(2)
-`,
-
-			debugFuncInput: compiler.LocationData{
-				Depth: 1,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 4},
-					End:   ast.Position{Line: 3, Col: 12},
-				},
-			},
-			expectedLocation: compiler.LocationData{
-				Depth: 1,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 8},
-					End:   ast.Position{Line: 3, Col: 9},
+					Start: ast.Position{Line: 4, Col: 1},
+					End:   ast.Position{Line: 4, Col: 2},
 				},
 			},
 			debugAction: runUntilBreakPoint,
@@ -1017,15 +991,41 @@ func(2)
 			debugFuncInput: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 4},
-					End:   ast.Position{Line: 3, Col: 11},
+					Start: ast.Position{Line: 4, Col: 5},
+					End:   ast.Position{Line: 4, Col: 13},
 				},
 			},
 			expectedLocation: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 11},
-					End:   ast.Position{Line: 3, Col: 12},
+					Start: ast.Position{Line: 4, Col: 12},
+					End:   ast.Position{Line: 4, Col: 13},
+				},
+			},
+			debugAction: runUntilBreakPoint,
+			running:     true,
+		},
+		{
+			input: `
+let func = fn(a) {
+    let b = a + 1
+    return b
+}
+func(2)
+`,
+
+			debugFuncInput: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 6, Col: 1},
+					End:   ast.Position{Line: 6, Col: 8},
+				},
+			},
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 6, Col: 6},
+					End:   ast.Position{Line: 6, Col: 7},
 				},
 			},
 			debugAction: runUntilBreakPoint,
@@ -1046,15 +1046,15 @@ squareAndDouble(2)
 			debugFuncInput: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 11},
-					End:   ast.Position{Line: 2, Col: 12},
+					Start: ast.Position{Line: 3, Col: 12},
+					End:   ast.Position{Line: 3, Col: 13},
 				},
 			},
 			expectedLocation: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 11},
-					End:   ast.Position{Line: 2, Col: 12},
+					Start: ast.Position{Line: 3, Col: 12},
+					End:   ast.Position{Line: 3, Col: 13},
 				},
 			},
 			debugAction: runUntilBreakPoint,
@@ -1094,13 +1094,13 @@ let c = 5
 			debugFuncInput: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 6, Col: 0},
-					End:   ast.Position{Line: 6, Col: 7}}},
+					Start: ast.Position{Line: 7, Col: 1},
+					End:   ast.Position{Line: 7, Col: 8}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 4},
-					End:   ast.Position{Line: 2, Col: 17},
+					Start: ast.Position{Line: 3, Col: 17},
+					End:   ast.Position{Line: 3, Col: 18},
 				},
 			},
 			debugAction: stepInto,
@@ -1108,8 +1108,8 @@ let c = 5
 				bp := compiler.LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 6, Col: 0},
-						End:   ast.Position{Line: 6, Col: 7},
+						Start: ast.Position{Line: 7, Col: 1},
+						End:   ast.Position{Line: 7, Col: 8},
 					},
 				}
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
@@ -1151,13 +1151,13 @@ let c = 5
 			debugFuncInput: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 4},
-					End:   ast.Position{Line: 2, Col: 17}}},
+					Start: ast.Position{Line: 3, Col: 4},
+					End:   ast.Position{Line: 3, Col: 17}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 6, Col: 0},
-					End:   ast.Position{Line: 6, Col: 7},
+					Start: ast.Position{Line: 7, Col: 1},
+					End:   ast.Position{Line: 7, Col: 8},
 				},
 			},
 			debugAction: stepOut,
@@ -1165,8 +1165,8 @@ let c = 5
 				bp := compiler.LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 2, Col: 4},
-						End:   ast.Position{Line: 2, Col: 17},
+						Start: ast.Position{Line: 3, Col: 4},
+						End:   ast.Position{Line: 3, Col: 17},
 					},
 				}
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))

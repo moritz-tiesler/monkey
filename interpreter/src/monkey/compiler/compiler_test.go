@@ -1118,8 +1118,8 @@ let a = 2
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 1, Col: 0},
-						End:   ast.Position{Line: 1, Col: 9},
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 2, Col: 10},
 					},
 				},
 			},
@@ -1136,43 +1136,43 @@ func(2)
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 1, Col: 11},
-						End:   ast.Position{Line: 4, Col: 1},
+						Start: ast.Position{Line: 2, Col: 12},
+						End:   ast.Position{Line: 5, Col: 2},
 					},
 				},
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 1, Col: 0},
-						End:   ast.Position{Line: 4, Col: 1},
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 5, Col: 2},
 					},
 				},
 				LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 2, Col: 4},
-						End:   ast.Position{Line: 2, Col: 17},
+						Start: ast.Position{Line: 3, Col: 5},
+						End:   ast.Position{Line: 3, Col: 18},
 					},
 				},
 				LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 3, Col: 8},
-						End:   ast.Position{Line: 3, Col: 9},
+						Start: ast.Position{Line: 4, Col: 9},
+						End:   ast.Position{Line: 4, Col: 10},
 					},
 				},
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 5, Col: 0},
-						End:   ast.Position{Line: 5, Col: 7},
+						Start: ast.Position{Line: 6, Col: 6},
+						End:   ast.Position{Line: 6, Col: 7},
 					},
 				},
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 5, Col: 0},
-						End:   ast.Position{Line: 5, Col: 7},
+						Start: ast.Position{Line: 6, Col: 1},
+						End:   ast.Position{Line: 6, Col: 8},
 					},
 				},
 			},
