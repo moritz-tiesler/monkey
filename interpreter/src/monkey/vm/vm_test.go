@@ -760,6 +760,7 @@ type vmDebuggerTestCase struct {
 	debugFuncInput   compiler.LocationData
 	expectedLocation compiler.LocationData
 	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
+	running          bool
 }
 
 type vmDebuggerTestCaseWithPreparation struct {
@@ -768,6 +769,7 @@ type vmDebuggerTestCaseWithPreparation struct {
 	prepFunc         func(*VM) *VM
 	expectedLocation compiler.LocationData
 	debugAction      func(*VM, compiler.LocationData) func(*VM) (bool, error)
+	running          bool
 }
 
 func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
@@ -804,6 +806,11 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 		currentLocation := vm.SourceLocation()
 		if currentLocation != tt.expectedLocation {
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
+		}
+
+		if vm.Running() != tt.running {
+
+			t.Errorf("expected running=%v, got=%v", tt.running, vm.Running())
 		}
 
 	}
@@ -844,6 +851,11 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 		currentLocation := vm.SourceLocation()
 		if currentLocation != tt.expectedLocation {
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
+		}
+
+		if vm.Running() != tt.running {
+
+			t.Errorf("expected running=%v, got=%v", tt.running, vm.Running())
 		}
 
 	}
@@ -900,6 +912,7 @@ let c = 4
 				},
 			},
 			debugAction: stepOver,
+			running:     true,
 		},
 	}
 
@@ -929,6 +942,7 @@ let c = 4
 				},
 			},
 			debugAction: runUntilBreakPoint,
+			running:     true,
 		},
 		{
 			input: `
@@ -954,6 +968,7 @@ func(2)
 				},
 			},
 			debugAction: runUntilBreakPoint,
+			running:     true,
 		},
 		{
 			input: `
@@ -979,6 +994,7 @@ func(2)
 				},
 			},
 			debugAction: runUntilBreakPoint,
+			running:     true,
 		},
 		{
 			input: `
@@ -1007,6 +1023,7 @@ squareAndDouble(2)
 				},
 			},
 			debugAction: runUntilBreakPoint,
+			running:     true,
 		},
 	}
 
@@ -1063,6 +1080,7 @@ let c = 5
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
 				return vm
 			},
+			running: true,
 		},
 	}
 
@@ -1119,6 +1137,7 @@ let c = 5
 				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
 				return vm
 			},
+			running: true,
 		},
 	}
 

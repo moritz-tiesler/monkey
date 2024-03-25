@@ -707,3 +707,14 @@ func (vm *VM) RunOp() error {
 
 	return nil
 }
+
+func (vm VM) Running() bool {
+	if vm.framesIndex > 1 {
+		return true
+	}
+
+	mainFrame := vm.frames[0]
+	mainIp := mainFrame.Ip
+	return mainIp <= len(mainFrame.Instructions())
+
+}
