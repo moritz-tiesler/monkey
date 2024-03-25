@@ -856,6 +856,7 @@ func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
 		cycleLocation := vm.SourceLocation()
 		cycleLine := cycleLocation.Range.Start.Line
 		if current.Range.Start.Line != cycleLine {
+			vm.CurrentFrame().Ip--
 			return true, nil
 		} else {
 			return false, nil
@@ -1013,9 +1014,9 @@ squareAndDouble(2)
 }
 
 func stepInto(vm *VM, loc compiler.LocationData) func(*VM) (bool, error) {
-	startingDepth := vm.callDepth
+	startingDepth := vm.CallDepth
 	return func(vm *VM) (bool, error) {
-		callDepth := vm.callDepth
+		callDepth := vm.CallDepth
 		if callDepth > startingDepth {
 			return true, nil
 		} else {
@@ -1069,9 +1070,9 @@ let c = 5
 }
 
 func stepOut(vm *VM, outOf compiler.LocationData) func(*VM) (bool, error) {
-	startingDepth := vm.callDepth
+	startingDepth := vm.CallDepth
 	return func(vm *VM) (bool, error) {
-		callDepth := vm.callDepth
+		callDepth := vm.CallDepth
 		if callDepth < startingDepth {
 			return true, nil
 		} else {

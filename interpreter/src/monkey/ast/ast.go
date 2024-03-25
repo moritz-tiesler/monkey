@@ -460,7 +460,6 @@ func (hl *HashLiteral) String() string {
 	return out.String()
 }
 
-// TODO fix this function
 func (hl *HashLiteral) Range() NodeRange {
 	return NodeRange{
 		Start: hl.Start,

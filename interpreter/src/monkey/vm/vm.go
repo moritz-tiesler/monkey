@@ -48,7 +48,7 @@ type VM struct {
 
 	frames      []*Frame
 	framesIndex int
-	callDepth   int
+	CallDepth   int
 
 	LocationMap compiler.LocationMap
 }
@@ -73,7 +73,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 
 		frames:      frames,
 		framesIndex: 1,
-		callDepth:   0,
+		CallDepth:   0,
 	}
 }
 
@@ -108,7 +108,7 @@ func NewFromMain(mainFn *object.CompiledFunction, bytecode *compiler.Bytecode, l
 
 		frames:      frames,
 		framesIndex: 1,
-		callDepth:   0,
+		CallDepth:   0,
 		LocationMap: locationMap,
 	}
 }
@@ -117,16 +117,14 @@ func (vm *VM) CurrentFrame() *Frame {
 	return vm.frames[vm.framesIndex-1]
 }
 
-//TODO: count how many frames have been pushed during run time to line up with scope ids
-
 func (vm *VM) pushFrame(f *Frame) {
-	vm.callDepth++
+	vm.CallDepth++
 	vm.frames[vm.framesIndex] = f
 	vm.framesIndex++
 }
 
 func (vm *VM) popFrame() *Frame {
-	vm.callDepth--
+	vm.CallDepth--
 	vm.framesIndex--
 	return vm.frames[vm.framesIndex]
 }
