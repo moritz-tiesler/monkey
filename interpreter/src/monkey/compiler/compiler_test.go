@@ -1128,7 +1128,7 @@ let a = 2
 			input: `
 let func = fn(a) {
     let b = 2 * a
-	return b
+    return b
 }
 func(2)
 `,
@@ -1157,8 +1157,8 @@ func(2)
 				LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 4, Col: 9},
-						End:   ast.Position{Line: 4, Col: 10},
+						Start: ast.Position{Line: 4, Col: 5},
+						End:   ast.Position{Line: 4, Col: 13},
 					},
 				},
 				LocationData{

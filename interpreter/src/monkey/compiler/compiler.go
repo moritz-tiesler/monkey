@@ -278,7 +278,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 			return fmt.Errorf("undefined variable %s", node.Value)
 		}
 
-		c.loadSymbol(symbol)
+		ii := c.loadSymbol(symbol)
+		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
 	case *ast.Boolean:
 		if node.Value {
@@ -432,21 +433,23 @@ func (c *Compiler) addInstruction(ins []byte) int {
 	return posNewInstruction
 }
 
-func (c *Compiler) loadSymbol(s Symbol) {
+func (c *Compiler) loadSymbol(s Symbol) int {
+	var pos int
 	switch s.Scope {
 
 	case GlobalScope:
-		c.emit(code.OpGetGlobal, s.Index)
+		pos = c.emit(code.OpGetGlobal, s.Index)
 	case LocalScope:
-		c.emit(code.OpGetLocal, s.Index)
+		pos = c.emit(code.OpGetLocal, s.Index)
 	case BuiltinScope:
-		c.emit(code.OpGetBuiltin, s.Index)
+		pos = c.emit(code.OpGetBuiltin, s.Index)
 	case FreeScope:
-		c.emit(code.OpGetFree, s.Index)
+		pos = c.emit(code.OpGetFree, s.Index)
 	case FunctionScope:
-		c.emit(code.OpCurrentClosure)
+		pos = c.emit(code.OpCurrentClosure)
 
 	}
+	return pos
 }
 
 func (c *Compiler) enterScope() {

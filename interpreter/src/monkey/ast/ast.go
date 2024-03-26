@@ -203,7 +203,7 @@ func (rs *ReturnStatement) statementNode()       {}
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
 func (rs *ReturnStatement) Range() NodeRange {
 	return NodeRange{
-		Start: Position{rs.ReturnValue.Range().Start.Line, rs.ReturnValue.Range().Start.Col},
+		Start: Position{rs.Token.Line, rs.Token.Col},
 		End:   Position{rs.ReturnValue.Range().End.Line, rs.ReturnValue.Range().End.Col},
 	}
 }
