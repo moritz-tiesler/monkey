@@ -450,8 +450,9 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 	var location compiler.LocationData
 	var found bool
 	var lk compiler.LocationKey
+	var scopeId *object.CompiledFunction
 	for ip <= len(vm.frames[vm.framesIndex-1].Instructions()) {
-		scopeId := vm.CurrentFrame().cl.Fn
+		scopeId = vm.CurrentFrame().cl.Fn
 		lk = compiler.LocationKey{ScopeId: scopeId, InstructionIndex: ip}
 		location, found = vm.LocationMap[lk]
 		if found {
@@ -462,31 +463,31 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 	if found {
 		return location
 	} else {
-		panic(fmt.Sprintf("Could not find location for ins=%d", startingP))
+		panic(fmt.Sprintf("Could not find location for ins=%d\n%s", startingP, scopeId.Instructions.String()))
 	}
 
 }
 
 type RunCondition func(*VM) (bool, error)
 
-func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error) {
+func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error, bool) {
 	for vm.CurrentFrame().Ip < len(vm.CurrentFrame().Instructions())-1 {
 		vm.AdvancePointers()
 		stop, err := runCondition(vm)
 		if err != nil {
-			return vm, fmt.Errorf("error when testing condition")
+			return vm, fmt.Errorf("error when testing condition"), false
 		}
 		if stop {
-			return vm, nil
+			return vm, nil, true
 		} else {
 			err := vm.RunOp()
 			if err != nil {
-				return vm, err
+				return vm, err, false
 			}
 		}
 	}
 
-	return vm, nil
+	return vm, nil, false
 }
 
 func (vm *VM) AdvancePointers() {
@@ -735,4 +736,56 @@ func (vm VM) State() State {
 	}
 
 	return STOPPED
+}
+
+func (vm *VM) Copy() *VM {
+	copy := &VM{
+		constants: vm.constants,
+
+		stack: make([]object.Object, StackSize),
+		sp:    0,
+
+		globals: make([]object.Object, GlobalsSize),
+
+		frames:      make([]*Frame, MaxFrames),
+		framesIndex: 1,
+		CallDepth:   0,
+	}
+	oldConstants := vm.constants
+	oldStack := vm.stack
+	oldSp := vm.sp
+	oldGlobals := vm.globals
+	oldFramesIndex := vm.framesIndex
+	oldCallDepth := vm.CallDepth
+
+	copy.constants = append(copy.constants, oldConstants...)
+	copy.stack = append(copy.stack, oldStack...)
+	copy.sp = oldSp
+	copy.globals = append(copy.globals, oldGlobals...)
+	// TODO frameIp still gets changed in the copy when running original vm
+	for i := 0; i < vm.framesIndex; i++ {
+		copy.frames[i] = vm.frames[i].Copy()
+	}
+	copy.framesIndex = oldFramesIndex
+	copy.CallDepth = oldCallDepth
+	if vm.LocationMap != nil {
+		copy.LocationMap = vm.LocationMap
+	}
+
+	return copy
+
+}
+
+func (f Frame) Copy() *Frame {
+	oldCl := f.cl
+	oldBp := f.basePointer
+	oldIp := f.Ip
+
+	copy := &Frame{
+		cl:          oldCl,
+		Ip:          oldIp,
+		basePointer: oldBp,
+	}
+
+	return copy
 }

@@ -798,7 +798,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 
 		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
 		step := tt.debugAction(tt.debugFuncInput)
-		vm, err = vm.RunWithCondition(step)
+		vm, err, _ = vm.RunWithCondition(step)
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
 		}
@@ -849,7 +849,7 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
 		vm = tt.prepFunc(vm)
 		step := tt.debugAction(vm, tt.debugFuncInput)
-		vm, err = vm.RunWithCondition(step)
+		vm, err, _ = vm.RunWithCondition(step)
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
 		}
@@ -1024,8 +1024,8 @@ func(2)
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 6, Col: 6},
-					End:   ast.Position{Line: 6, Col: 7},
+					Start: ast.Position{Line: 6, Col: 1},
+					End:   ast.Position{Line: 6, Col: 5},
 				},
 			},
 			debugAction: runUntilBreakPoint,
@@ -1099,8 +1099,8 @@ let c = 5
 			expectedLocation: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 17},
-					End:   ast.Position{Line: 3, Col: 18},
+					Start: ast.Position{Line: 3, Col: 13},
+					End:   ast.Position{Line: 3, Col: 14},
 				},
 			},
 			debugAction: stepInto,
@@ -1112,7 +1112,7 @@ let c = 5
 						End:   ast.Position{Line: 7, Col: 8},
 					},
 				}
-				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
 				return vm
 			},
 			vmState: STOPPED,
@@ -1169,7 +1169,7 @@ let c = 5
 						End:   ast.Position{Line: 3, Col: 17},
 					},
 				}
-				vm, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
 				return vm
 			},
 			vmState: STOPPED,
