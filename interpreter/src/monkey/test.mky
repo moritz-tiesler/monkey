@@ -1,3 +1,7 @@
-puts(if (true) {
-3}
-else {4})
+let func = fn(a) {
+	let b = a + 1
+	return b
+}
+let x = 3;
+puts(3)
+puts(b)

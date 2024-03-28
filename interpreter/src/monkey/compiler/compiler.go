@@ -98,8 +98,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		if err != nil {
 			return err
 		}
-		ip := c.emit(code.OpPop)
-		c.mapInstructionToNode(c.currenScopeId(), ip, node)
+		_ = c.emit(code.OpPop)
+		//c.mapInstructionToNode(c.currenScopeId(), ip, node)
 
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
@@ -288,6 +288,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 			c.emit(code.OpFalse)
 		}
 	case *ast.FunctionLiteral:
+		var ii int
 		c.enterScope()
 
 		if node.Name != "" {
@@ -307,6 +308,9 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		if c.lastInstructionIs(code.OpPop) {
+			lastNode := node.Body.Statements[len(node.Body.Statements)-1]
+			ii = c.scopes[c.scopeIndex].lastInstruction.Position
+			c.mapInstructionToNode(c.currenScopeId(), ii, lastNode)
 			c.replaceLastPopWithReturn()
 		}
 		if !c.lastInstructionIs(code.OpReturnValue) {
@@ -325,7 +329,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		fnIndex := c.addConstant(compiledFn)
-		ii := c.emit(code.OpClosure, fnIndex, len(freeSymbols))
+		ii = c.emit(code.OpClosure, fnIndex, len(freeSymbols))
 		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
 	case *ast.ReturnStatement:

@@ -1079,7 +1079,7 @@ type rangeTest struct {
 
 func runRangeTests(t *testing.T, tests []rangeTest) {
 	t.Helper()
-	for _, tt := range tests {
+	for i, tt := range tests {
 		program := parse(tt.input)
 		compiler := New()
 		err := compiler.Compile(program)
@@ -1089,6 +1089,11 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 		bytecode := compiler.Bytecode()
 
 		compilerLocations := compiler.LocationMap.Locations()
+		if len(compilerLocations) != len(tt.expectedLocations) {
+			t.Errorf("error in test=%d", i+1)
+			t.Errorf("wrong number of locations: expected=%d, got=%d",
+				len(tt.expectedLocations), len(compilerLocations))
+		}
 		for _, expected := range tt.expectedLocations {
 			ok := slices.ContainsFunc(compilerLocations, func(l LocationData) bool {
 				return l == expected
@@ -1122,6 +1127,13 @@ let a = 2
 						End:   ast.Position{Line: 2, Col: 10},
 					},
 				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 9},
+						End:   ast.Position{Line: 2, Col: 10},
+					},
+				},
 			},
 		},
 		{
@@ -1136,14 +1148,14 @@ func(2)
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 2, Col: 12},
+						Start: ast.Position{Line: 2, Col: 1},
 						End:   ast.Position{Line: 5, Col: 2},
 					},
 				},
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
-						Start: ast.Position{Line: 2, Col: 1},
+						Start: ast.Position{Line: 2, Col: 12},
 						End:   ast.Position{Line: 5, Col: 2},
 					},
 				},
@@ -1157,7 +1169,28 @@ func(2)
 				LocationData{
 					Depth: 1,
 					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 13},
+						End:   ast.Position{Line: 3, Col: 14},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 17},
+						End:   ast.Position{Line: 3, Col: 18},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
 						Start: ast.Position{Line: 4, Col: 5},
+						End:   ast.Position{Line: 4, Col: 13},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 4, Col: 12},
 						End:   ast.Position{Line: 4, Col: 13},
 					},
 				},
@@ -1172,7 +1205,154 @@ func(2)
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 6, Col: 1},
+						End:   ast.Position{Line: 6, Col: 5},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 6, Col: 1},
 						End:   ast.Position{Line: 6, Col: 8},
+					},
+				},
+			},
+		},
+		{
+			input: `
+let func = fn(a) {
+    let b = 2 * a
+    b
+}
+func(2)
+`,
+			expectedLocations: []LocationData{
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 5, Col: 2},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 12},
+						End:   ast.Position{Line: 5, Col: 2},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 5},
+						End:   ast.Position{Line: 3, Col: 18},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 13},
+						End:   ast.Position{Line: 3, Col: 14},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 17},
+						End:   ast.Position{Line: 3, Col: 18},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 4, Col: 5},
+						End:   ast.Position{Line: 4, Col: 6},
+					},
+				},
+				// Duplicate location, this is done to map the implicit return
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 4, Col: 5},
+						End:   ast.Position{Line: 4, Col: 6},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 6, Col: 6},
+						End:   ast.Position{Line: 6, Col: 7},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 6, Col: 1},
+						End:   ast.Position{Line: 6, Col: 5},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 6, Col: 1},
+						End:   ast.Position{Line: 6, Col: 8},
+					},
+				},
+			},
+		},
+		{
+			input: `
+let func = fn(a) {a}
+func(2)
+`,
+			expectedLocations: []LocationData{
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 2, Col: 21},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 2, Col: 21},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 12},
+						End:   ast.Position{Line: 2, Col: 21},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 19},
+						End:   ast.Position{Line: 2, Col: 20},
+					},
+				},
+				// Duplicate location, this is done to map the implicit return
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 19},
+						End:   ast.Position{Line: 2, Col: 20},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 1},
+						End:   ast.Position{Line: 3, Col: 8},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 6},
+						End:   ast.Position{Line: 3, Col: 7},
 					},
 				},
 			},

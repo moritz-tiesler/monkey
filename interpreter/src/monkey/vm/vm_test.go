@@ -1156,8 +1156,44 @@ let c = 5
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
+					Start: ast.Position{Line: 8, Col: 9},
+					End:   ast.Position{Line: 8, Col: 10},
+				},
+			},
+			debugAction: stepOut,
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 4},
+						End:   ast.Position{Line: 3, Col: 17},
+					},
+				}
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+			vmState: STOPPED,
+		},
+		{
+			input: `
+let func = fn(x) {
+    let y = x + 1
+    return y
+}
+let b = 3
+let res = func(b)
+let c = 5
+`,
+			debugFuncInput: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 4},
+					End:   ast.Position{Line: 3, Col: 17}}},
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
 					Start: ast.Position{Line: 7, Col: 1},
-					End:   ast.Position{Line: 7, Col: 8},
+					End:   ast.Position{Line: 7, Col: 18},
 				},
 			},
 			debugAction: stepOut,
