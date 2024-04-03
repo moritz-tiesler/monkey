@@ -24,6 +24,10 @@ func (f *Frame) Closure() *object.Closure {
 	return f.cl
 }
 
+func (f Frame) Name() string {
+	return f.cl.Fn.Name
+}
+
 func NewFrame(cl *object.Closure, basePointer int) *Frame {
 	f := &Frame{
 		cl:          cl,
@@ -32,6 +36,20 @@ func NewFrame(cl *object.Closure, basePointer int) *Frame {
 	}
 
 	return f
+}
+
+func (f Frame) Copy() *Frame {
+	oldCl := f.cl
+	oldBp := f.basePointer
+	oldIp := f.Ip
+
+	copy := &Frame{
+		cl:          oldCl,
+		Ip:          oldIp,
+		basePointer: oldBp,
+	}
+
+	return copy
 }
 
 func (f *Frame) Instructions() code.Instructions {
@@ -776,16 +794,10 @@ func (vm *VM) Copy() *VM {
 
 }
 
-func (f Frame) Copy() *Frame {
-	oldCl := f.cl
-	oldBp := f.basePointer
-	oldIp := f.Ip
+func (vm VM) FramesIndex() int {
+	return vm.framesIndex
+}
 
-	copy := &Frame{
-		cl:          oldCl,
-		Ip:          oldIp,
-		basePointer: oldBp,
-	}
-
-	return copy
+func (vm VM) Frames() []*Frame {
+	return vm.frames
 }

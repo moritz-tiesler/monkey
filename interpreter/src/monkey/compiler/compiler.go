@@ -296,6 +296,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 
 		compiledFn := &object.CompiledFunction{}
+		compiledFn.Name = node.Name
 		c.scopes[c.scopeIndex].scopeId = compiledFn
 
 		for _, p := range node.Parameters {
