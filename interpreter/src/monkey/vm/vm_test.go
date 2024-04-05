@@ -796,7 +796,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 			fmt.Printf("\n")
 		}
 
-		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap, comp.NameStore)
 		step := tt.debugAction(tt.debugFuncInput)
 		vm, err, _ = vm.RunWithCondition(step)
 		if err != nil {
@@ -846,7 +846,7 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 			fmt.Printf("\n")
 		}
 
-		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap, comp.NameStore)
 		vm = tt.prepFunc(vm)
 		step := tt.debugAction(vm, tt.debugFuncInput)
 		vm, err, _ = vm.RunWithCondition(step)
@@ -1216,9 +1216,10 @@ let c = 5
 }
 
 type varTest struct {
-	input      string
-	breakPoint compiler.LocationData
-	expected   [][]any
+	input         string
+	breakPoint    compiler.LocationData
+	expected      [][]any
+	expectedNames [][]string
 }
 
 func TestActiveVars(t *testing.T) {
@@ -1247,6 +1248,11 @@ let z = d
 					(&object.Boolean{Value: true}).HashKey(): 2,
 					(&object.Integer{Value: 1}).HashKey():    1},
 			},
+			},
+			expectedNames: [][]string{
+				{
+					"n", "s", "a", "d",
+				},
 			},
 		},
 		{
@@ -1278,6 +1284,14 @@ puts(sum)
 					7,
 				},
 			},
+			expectedNames: [][]string{
+				{
+					"func", "x", "z", "sum",
+				},
+				{
+					"res",
+				},
+			},
 		},
 		{
 			input: `
@@ -1306,10 +1320,18 @@ puts(sum)
 					7,
 				},
 			},
+			expectedNames: [][]string{
+				{
+					"func", "x", "z", "sum",
+				},
+				{
+					"res",
+				},
+			},
 		},
 	}
 
-	for _, tt := range tests {
+	for k, tt := range tests {
 		program := parse(tt.input)
 		comp := compiler.New()
 		err := comp.Compile(program)
@@ -1317,26 +1339,37 @@ puts(sum)
 			t.Fatalf("compiler error: %s", err)
 		}
 
-		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap, comp.NameStore)
 		vm, err, _ = vm.RunWithCondition(runUntilBreakPoint(tt.breakPoint))
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
 		}
 
-		acutalVars := [][]*object.Object{}
 		for i := 0; i < vm.framesIndex; i++ {
 			frame := vm.frames[i]
-			frameVars := vm.ActiveVars(*frame)
-			acutalVars = append(acutalVars, frameVars)
-		}
+			frameVars, names := vm.ActiveObjects(*frame)
+			for j, acutalVar := range frameVars {
+				expected := tt.expected[i][j]
+				testExpectedObject(t, expected, *acutalVar)
 
-		for i, frameVars := range tt.expected {
-			for j, v := range frameVars {
-
-				actual := acutalVars[i][j]
-				testExpectedObject(t, v, *actual)
+				acutalName := names[acutalVar]
+				expectedName := tt.expectedNames[i][j]
+				if acutalName != expectedName {
+					t.Errorf("error in test %d", k+1)
+					t.Errorf("wrong variable name: expected=%s, got=%s", expectedName, acutalName)
+				}
 			}
+
 		}
+
+		//for i, frameVars := range tt.expected {
+		//for j, v := range frameVars {
+
+		//actual := acutalVars[i][j]
+		//testExpectedObject(t, v, *actual)
+		//}
+		//}
+
 	}
 
 }

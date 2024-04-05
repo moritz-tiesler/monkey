@@ -7,8 +7,8 @@ import (
 	"monkey/object"
 )
 
-const StackSize = 2048
-const GlobalsSize = 65536
+const StackSize = compiler.StackSize
+const GlobalsSize = compiler.GlobalsSize
 
 var True = &object.Boolean{Value: true}
 var False = &object.Boolean{Value: false}
@@ -69,6 +69,7 @@ type VM struct {
 	CallDepth   int
 
 	LocationMap compiler.LocationMap
+	compiler.NameStore
 }
 
 const MaxFrames = 1024
@@ -107,7 +108,12 @@ func NewWithLocations(bytecode *compiler.Bytecode, lm compiler.LocationMap) *VM 
 	return vm
 }
 
-func NewFromMain(mainFn *object.CompiledFunction, bytecode *compiler.Bytecode, locationMap compiler.LocationMap) *VM {
+func NewFromMain(
+	mainFn *object.CompiledFunction,
+	bytecode *compiler.Bytecode,
+	locationMap compiler.LocationMap,
+	nameStore compiler.NameStore,
+) *VM {
 
 	mainClosure := &object.Closure{Fn: mainFn}
 
@@ -128,6 +134,7 @@ func NewFromMain(mainFn *object.CompiledFunction, bytecode *compiler.Bytecode, l
 		framesIndex: 1,
 		CallDepth:   0,
 		LocationMap: locationMap,
+		NameStore:   nameStore,
 	}
 }
 
@@ -802,24 +809,28 @@ func (vm VM) Frames() []*Frame {
 	return vm.frames
 }
 
-func (vm VM) ActiveObjects(f Frame) []*object.Object {
+func (vm VM) ActiveObjects(f Frame) ([]*object.Object, map[*object.Object]string) {
 	vars := []*object.Object{}
+	names := make(map[*object.Object]string)
 	ins := f.Instructions()
 	for i := 0; i < f.Ip; i++ {
 		op := code.Opcode(ins[i])
 		switch op {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[i+1:])
+			name := vm.GetGlobalName(int(globalIndex))
 			global := vm.globals[globalIndex]
+			names[&global] = name
 			vars = append(vars, &global)
 
 		case code.OpSetLocal:
 			localIndex := code.ReadUint8(ins[i+1:])
-
+			name := vm.GetLocalName(int(localIndex))
 			local := vm.stack[f.basePointer+int(localIndex)]
+			names[&local] = name
 			vars = append(vars, &local)
 		}
 	}
 
-	return vars
+	return vars, names
 }

@@ -8,6 +8,9 @@ import (
 	"sort"
 )
 
+const StackSize = 2048
+const GlobalsSize = 65536
+
 type EmittedInstruction struct {
 	Opcode   code.Opcode
 	Position int
@@ -42,6 +45,7 @@ type LocationScope struct {
 }
 
 type Compiler struct {
+	NameStore
 	constants   []object.Object
 	symbolTable *SymbolTable
 	scopes      []CompilationScope
@@ -73,6 +77,7 @@ func New() *Compiler {
 
 		scopeDepth:  0,
 		LocationMap: make(map[LocationKey]LocationData),
+		NameStore:   *NewNameStore(StackSize, GlobalsSize),
 	}
 }
 
@@ -266,9 +271,11 @@ func (c *Compiler) Compile(node ast.Node) error {
 		}
 		if symbol.Scope == GlobalScope {
 			ii = c.emit(code.OpSetGlobal, symbol.Index)
+			c.StoreGlobalName(node.Name.Value, symbol.Index)
 
 		} else {
 			ii = c.emit(code.OpSetLocal, symbol.Index)
+			c.StoreLocalName(node.Name.Value, symbol.Index)
 		}
 		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
@@ -544,4 +551,36 @@ func (c *Compiler) currenScopeId() *object.CompiledFunction {
 	}
 	return c.scopes[c.scopeIndex].scopeId
 
+}
+
+type NameStore struct {
+	stackIndex  int
+	globalIndex int
+	stackNames  []string
+	globalNames []string
+}
+
+func NewNameStore(stackSize int, globalsSize int) *NameStore {
+	return &NameStore{
+		stackIndex:  0,
+		globalIndex: 0,
+		stackNames:  make([]string, stackSize),
+		globalNames: make([]string, globalsSize),
+	}
+}
+
+func (ns *NameStore) StoreLocalName(name string, index int) {
+	ns.stackNames[index] = name
+}
+
+func (ns *NameStore) StoreGlobalName(name string, index int) {
+	ns.globalNames[index] = name
+}
+
+func (ns *NameStore) GetLocalName(index int) string {
+	return ns.stackNames[index]
+}
+
+func (ns *NameStore) GetGlobalName(index int) string {
+	return ns.globalNames[index]
 }
