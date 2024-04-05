@@ -1214,3 +1214,129 @@ let c = 5
 
 	runVmDebuggingTestsWithPrep(t, tests)
 }
+
+type varTest struct {
+	input      string
+	breakPoint compiler.LocationData
+	expected   [][]any
+}
+
+func TestActiveVars(t *testing.T) {
+	tests := []varTest{
+		{
+			input: `
+let n = 3;
+let s = "a"
+let a = [1, 2, 3] 
+let d = {"a": 1, true: 2, 1: 1}
+let z = d
+`,
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 6, Col: 9},
+					End:   ast.Position{Line: 6, Col: 10},
+				},
+			},
+			expected: [][]any{{
+				3,
+				"a",
+				[]int{1, 2, 3},
+				map[object.HashKey]int64{
+					(&object.String{Value: "a"}).HashKey():   1,
+					(&object.Boolean{Value: true}).HashKey(): 2,
+					(&object.Integer{Value: 1}).HashKey():    1},
+			},
+			},
+		},
+		{
+			input: `
+let func = fn(a, b) {
+	let res = a + b
+	return res
+};
+let x = 3
+let z = 4
+let sum = func(x, z)
+puts(sum)
+`,
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 4, Col: 9},
+					End:   ast.Position{Line: 4, Col: 10},
+				},
+			},
+			expected: [][]any{
+				{
+					object.Closure{},
+					3,
+					4,
+				},
+
+				{
+					7,
+				},
+			},
+		},
+		{
+			input: `
+let func = fn(a, b) {
+	let res = a + b
+	return res
+};
+let x = 3
+let z = 4
+let sum = func(x, z)
+puts(sum)
+`,
+
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 9, Col: 9},
+					End:   ast.Position{Line: 9, Col: 10},
+				},
+			},
+			expected: [][]any{
+				{
+					object.Closure{},
+					3,
+					4,
+					7,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		program := parse(tt.input)
+		comp := compiler.New()
+		err := comp.Compile(program)
+		if err != nil {
+			t.Fatalf("compiler error: %s", err)
+		}
+
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap)
+		vm, err, _ = vm.RunWithCondition(runUntilBreakPoint(tt.breakPoint))
+		if err != nil {
+			t.Fatalf("vm error: %s", err)
+		}
+
+		acutalVars := [][]*object.Object{}
+		for i := 0; i < vm.framesIndex; i++ {
+			frame := vm.frames[i]
+			frameVars := vm.ActiveVars(*frame)
+			acutalVars = append(acutalVars, frameVars)
+		}
+
+		for i, frameVars := range tt.expected {
+			for j, v := range frameVars {
+
+				actual := acutalVars[i][j]
+				testExpectedObject(t, v, *actual)
+			}
+		}
+	}
+
+}

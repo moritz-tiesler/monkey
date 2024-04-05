@@ -801,3 +801,25 @@ func (vm VM) FramesIndex() int {
 func (vm VM) Frames() []*Frame {
 	return vm.frames
 }
+
+func (vm VM) ActiveObjects(f Frame) []*object.Object {
+	vars := []*object.Object{}
+	ins := f.Instructions()
+	for i := 0; i < f.Ip; i++ {
+		op := code.Opcode(ins[i])
+		switch op {
+		case code.OpSetGlobal:
+			globalIndex := code.ReadUint16(ins[i+1:])
+			global := vm.globals[globalIndex]
+			vars = append(vars, &global)
+
+		case code.OpSetLocal:
+			localIndex := code.ReadUint8(ins[i+1:])
+
+			local := vm.stack[f.basePointer+int(localIndex)]
+			vars = append(vars, &local)
+		}
+	}
+
+	return vars
+}
