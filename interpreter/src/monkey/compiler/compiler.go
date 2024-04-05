@@ -307,7 +307,8 @@ func (c *Compiler) Compile(node ast.Node) error {
 		c.scopes[c.scopeIndex].scopeId = compiledFn
 
 		for _, p := range node.Parameters {
-			c.symbolTable.Define(p.Value)
+			symbol := c.symbolTable.Define(p.Value)
+			c.StoreLocalName(symbol.Name, symbol.Index)
 		}
 
 		err := c.Compile(node.Body)

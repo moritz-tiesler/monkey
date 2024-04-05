@@ -813,6 +813,17 @@ func (vm VM) ActiveObjects(f Frame) ([]*object.Object, map[*object.Object]string
 	vars := []*object.Object{}
 	names := make(map[*object.Object]string)
 	ins := f.Instructions()
+
+	// collect passed arguments
+	// check what happens if objects are referenced under a new name multiple times
+	for i := 0; i < f.cl.Fn.NumParameters; i++ {
+		argIndex := f.basePointer + i
+		arg := vm.stack[argIndex]
+		vars = append(vars, &arg)
+		names[&arg] = vm.GetLocalName(int(argIndex) - 1)
+
+	}
+
 	for i := 0; i < f.Ip; i++ {
 		op := code.Opcode(ins[i])
 		switch op {

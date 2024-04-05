@@ -1226,6 +1226,91 @@ func TestActiveVars(t *testing.T) {
 	tests := []varTest{
 		{
 			input: `
+let inner = fn(x) {
+	return x * 2 
+}
+let v = 4
+let res = inner(v)
+puts(res)
+`,
+
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 9},
+					End:   ast.Position{Line: 3, Col: 10},
+				},
+			},
+			expected: [][]any{
+				{
+					object.Closure{},
+					4,
+				},
+				{
+					4,
+				},
+			},
+			expectedNames: [][]string{
+				{
+					"inner", "v",
+				},
+				{
+					"x",
+				},
+			},
+		},
+		{
+			input: `
+let inner = fn(x, y) {
+	let res = x + y
+	return res
+}
+let outer = fn(a, b) {
+	let res = inner(a, b)
+	return res
+}
+let u = 3
+let v = 4
+let sum = outer(u, v)
+puts(sum)
+`,
+
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 14, Col: 9},
+					End:   ast.Position{Line: 14, Col: 10},
+				},
+			},
+			expected: [][]any{
+				{
+					object.Closure{},
+					object.Closure{},
+					3,
+					4,
+					7,
+				},
+				{
+					3, 4, 7,
+				},
+				{
+					3, 4, 7,
+				},
+			},
+			expectedNames: [][]string{
+				{
+					"inner", "outer", "u", "v", "sum",
+				},
+				{
+					"a", "b", "res",
+				},
+				{
+					"x", "y", "res",
+				},
+			},
+		},
+		{
+			input: `
 let n = 3;
 let s = "a"
 let a = [1, 2, 3] 
@@ -1281,6 +1366,8 @@ puts(sum)
 				},
 
 				{
+					3,
+					4,
 					7,
 				},
 			},
@@ -1289,7 +1376,7 @@ puts(sum)
 					"func", "x", "z", "sum",
 				},
 				{
-					"res",
+					"a", "b", "res",
 				},
 			},
 		},
@@ -1325,7 +1412,7 @@ puts(sum)
 					"func", "x", "z", "sum",
 				},
 				{
-					"res",
+					"a", "b", "res",
 				},
 			},
 		},
@@ -1361,14 +1448,6 @@ puts(sum)
 			}
 
 		}
-
-		//for i, frameVars := range tt.expected {
-		//for j, v := range frameVars {
-
-		//actual := acutalVars[i][j]
-		//testExpectedObject(t, v, *actual)
-		//}
-		//}
 
 	}
 
