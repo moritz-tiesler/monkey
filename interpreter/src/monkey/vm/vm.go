@@ -815,12 +815,11 @@ func (vm VM) ActiveObjects(f Frame) ([]*object.Object, map[*object.Object]string
 	ins := f.Instructions()
 
 	// collect passed arguments
-	// check what happens if objects are referenced under a new name multiple times
 	for i := 0; i < f.cl.Fn.NumParameters; i++ {
 		argIndex := f.basePointer + i
 		arg := vm.stack[argIndex]
 		vars = append(vars, &arg)
-		names[&arg] = vm.GetLocalName(int(argIndex) - 1)
+		names[&arg] = vm.GetLocalName(f.cl.Fn, i)
 
 	}
 
@@ -836,7 +835,7 @@ func (vm VM) ActiveObjects(f Frame) ([]*object.Object, map[*object.Object]string
 
 		case code.OpSetLocal:
 			localIndex := code.ReadUint8(ins[i+1:])
-			name := vm.GetLocalName(int(localIndex))
+			name := vm.GetLocalName(f.cl.Fn, int(localIndex))
 			local := vm.stack[f.basePointer+int(localIndex)]
 			names[&local] = name
 			vars = append(vars, &local)

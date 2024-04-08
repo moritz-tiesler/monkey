@@ -275,7 +275,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		} else {
 			ii = c.emit(code.OpSetLocal, symbol.Index)
-			c.StoreLocalName(node.Name.Value, symbol.Index)
+			c.StoreLocalName(node.Name.Value, c.currenScopeId(), symbol.Index)
 		}
 		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
@@ -308,7 +308,7 @@ func (c *Compiler) Compile(node ast.Node) error {
 
 		for _, p := range node.Parameters {
 			symbol := c.symbolTable.Define(p.Value)
-			c.StoreLocalName(symbol.Name, symbol.Index)
+			c.StoreLocalName(symbol.Name, c.currenScopeId(), symbol.Index)
 		}
 
 		err := c.Compile(node.Body)
@@ -557,7 +557,7 @@ func (c *Compiler) currenScopeId() *object.CompiledFunction {
 type NameStore struct {
 	stackIndex  int
 	globalIndex int
-	stackNames  []string
+	stackNames  map[*object.CompiledFunction][]string
 	globalNames []string
 }
 
@@ -565,21 +565,24 @@ func NewNameStore(stackSize int, globalsSize int) *NameStore {
 	return &NameStore{
 		stackIndex:  0,
 		globalIndex: 0,
-		stackNames:  make([]string, stackSize),
+		stackNames:  make(map[*object.CompiledFunction][]string),
 		globalNames: make([]string, globalsSize),
 	}
 }
 
-func (ns *NameStore) StoreLocalName(name string, index int) {
-	ns.stackNames[index] = name
+func (ns *NameStore) StoreLocalName(name string, scopeId *object.CompiledFunction, index int) {
+	if _, ok := ns.stackNames[scopeId]; !ok {
+		ns.stackNames[scopeId] = []string{}
+	}
+	ns.stackNames[scopeId] = append(ns.stackNames[scopeId], name)
 }
 
 func (ns *NameStore) StoreGlobalName(name string, index int) {
 	ns.globalNames[index] = name
 }
 
-func (ns *NameStore) GetLocalName(index int) string {
-	return ns.stackNames[index]
+func (ns *NameStore) GetLocalName(scopeId *object.CompiledFunction, index int) string {
+	return ns.stackNames[scopeId][index]
 }
 
 func (ns *NameStore) GetGlobalName(index int) string {

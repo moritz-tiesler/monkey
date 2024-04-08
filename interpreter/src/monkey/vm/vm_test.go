@@ -1226,6 +1226,55 @@ func TestActiveVars(t *testing.T) {
 	tests := []varTest{
 		{
 			input: `
+let inner = fn(x, y) {
+	let res = x + y
+	return res
+}
+let outer = fn(a, b) {
+	let res = inner(a, b)
+	return res
+}
+let u = 3
+let v = 4
+let sum = outer(u, v)
+puts(sum)
+`,
+
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 4, Col: 9},
+					End:   ast.Position{Line: 4, Col: 10},
+				},
+			},
+			expected: [][]any{
+				{
+					object.Closure{},
+					object.Closure{},
+					3,
+					4,
+				},
+				{
+					3, 4,
+				},
+				{
+					3, 4, 7,
+				},
+			},
+			expectedNames: [][]string{
+				{
+					"inner", "outer", "u", "v",
+				},
+				{
+					"a", "b", "res",
+				},
+				{
+					"x", "y", "res",
+				},
+			},
+		},
+		{
+			input: `
 let inner = fn(x) {
 	return x * 2 
 }
@@ -1256,56 +1305,6 @@ puts(res)
 				},
 				{
 					"x",
-				},
-			},
-		},
-		{
-			input: `
-let inner = fn(x, y) {
-	let res = x + y
-	return res
-}
-let outer = fn(a, b) {
-	let res = inner(a, b)
-	return res
-}
-let u = 3
-let v = 4
-let sum = outer(u, v)
-puts(sum)
-`,
-
-			breakPoint: compiler.LocationData{
-				Depth: 0,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 14, Col: 9},
-					End:   ast.Position{Line: 14, Col: 10},
-				},
-			},
-			expected: [][]any{
-				{
-					object.Closure{},
-					object.Closure{},
-					3,
-					4,
-					7,
-				},
-				{
-					3, 4, 7,
-				},
-				{
-					3, 4, 7,
-				},
-			},
-			expectedNames: [][]string{
-				{
-					"inner", "outer", "u", "v", "sum",
-				},
-				{
-					"a", "b", "res",
-				},
-				{
-					"x", "y", "res",
 				},
 			},
 		},
