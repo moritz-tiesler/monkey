@@ -48,6 +48,8 @@ const (
 	NOT_EQ   = "!="
 	STRING   = "STRING"
 	PERIOD   = "."
+
+	SLIMARROW = "->"
 )
 
 var keywords = map[string]TokenType{

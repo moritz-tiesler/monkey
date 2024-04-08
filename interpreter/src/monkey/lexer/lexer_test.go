@@ -31,6 +31,8 @@ if (5 < 10) {
 {"foo": "bar"}
 
 let a = bar.foo()
+
+let lambda = {x, y -> x + y}
 `
 
 	tests := []struct {
@@ -131,6 +133,18 @@ let a = bar.foo()
 		{token.IDENT, "foo"},
 		{token.LPAREN, "("},
 		{token.RPAREN, ")"},
+		{token.LET, "let"},
+		{token.IDENT, "lambda"},
+		{token.ASSIGN, "="},
+		{token.LBRACE, "{"},
+		{token.IDENT, "x"},
+		{token.COMMA, ","},
+		{token.IDENT, "y"},
+		{token.SLIMARROW, "->"},
+		{token.IDENT, "x"},
+		{token.PLUS, "+"},
+		{token.IDENT, "y"},
+		{token.RBRACE, "}"},
 		{token.EOF, ""},
 	}
 

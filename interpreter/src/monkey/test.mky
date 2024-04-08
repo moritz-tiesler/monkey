@@ -1,7 +1,7 @@
-let func = fn(a) {
+let func =  { a ->
 	let b = a + 1
 	return b
 }
 let x = 3;
 puts(3)
-puts(b)
+puts(x)

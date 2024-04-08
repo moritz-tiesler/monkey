@@ -70,6 +70,43 @@ func (fl *FunctionLiteral) Range() NodeRange {
 	}
 }
 
+//type LambdaLiteral struct {
+//Token      token.Token
+//Parameters []*Identifier
+//Body       *BlockStatement
+//Name       string
+//Start      Position
+//End        Position
+//}
+
+//func (ll *LambdaLiteral) expressionNode()      {}
+//func (ll *LambdaLiteral) TokenLiteral() string { return ll.Token.Literal }
+//func (ll *LambdaLiteral) String() string {
+//var out bytes.Buffer
+
+//params := []string{}
+//for _, p := range ll.Parameters {
+//params = append(params, p.String())
+//}
+
+//out.WriteString(ll.TokenLiteral())
+//if ll.Name != "" {
+//out.WriteString(fmt.Sprintf("<%s>", ll.Name))
+//}
+//out.WriteString("(")
+//out.WriteString(strings.Join(params, ", "))
+//out.WriteString(") ")
+//out.WriteString(ll.Body.String())
+
+//return out.String()
+//}
+//func (ll *LambdaLiteral) Range() NodeRange {
+//return NodeRange{
+//Start: ll.Start,
+//End:   ll.End,
+//}
+//}
+
 type StringLiteral struct {
 	Token token.Token
 	Value string

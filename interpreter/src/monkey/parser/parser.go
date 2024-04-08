@@ -53,7 +53,9 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
-	p.registerPrefix(token.LBRACE, p.parseHashLiteral)
+	//p.registerPrefix(token.LBRACE, p.parseHashLiteral)
+	//p.registerPrefix(token.LBRACE, p.parseLambdaLiteral)
+	p.registerPrefix(token.LBRACE, p.dispatchLBrace)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 
@@ -380,6 +382,51 @@ func (p *Parser) parseMethodCallExpression(firstArg ast.Expression) ast.Expressi
 	call.Arguments = append([]ast.Expression{firstArg}, call.Arguments...)
 
 	return call
+}
+
+func (p *Parser) dispatchLBrace() ast.Expression {
+
+	tokenCur, tokenPeek := p.curToken, p.peekToken
+	anchorCurrent, anchorReading, anchorChar := p.l.Positions()
+	hash := p.parseHashLiteral()
+	if hash == nil {
+		p.errors = p.errors[:len(p.errors)-1]
+		p.curToken = tokenCur
+		p.peekToken = tokenPeek
+		p.l.SetPositions(anchorCurrent, anchorReading, anchorChar)
+		lit := &ast.FunctionLiteral{Token: p.curToken}
+		lit.Start = ast.Position{Line: lit.Token.Line, Col: lit.Token.Col}
+		lit.Parameters = p.parserLambdaParameters()
+		lit.Body = p.parseBlockStatement()
+		return lit
+	}
+	return hash
+
+}
+
+func (p *Parser) parserLambdaParameters() []*ast.Identifier {
+	identifiers := []*ast.Identifier{}
+
+	p.nextToken()
+
+	ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	ident.Start = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col}
+	ident.End = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col + len(ident.Token.Literal)}
+	identifiers = append(identifiers, ident)
+	for p.peekTokenIs(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+		ident.Start = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col}
+		ident.End = ast.Position{Line: ident.Token.Line, Col: ident.Token.Col + len(ident.Token.Literal)}
+		identifiers = append(identifiers, ident)
+	}
+
+	if !p.expectPeek(token.SLIMARROW) {
+		return nil
+	}
+
+	return identifiers
 }
 
 func (p *Parser) parseCallArguments() []ast.Expression {

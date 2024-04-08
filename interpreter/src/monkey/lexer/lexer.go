@@ -38,7 +38,14 @@ func (l *Lexer) NextToken() token.Token {
 	case '+':
 		tok = newToken(token.PLUS, l.ch, l.line, currCol)
 	case '-':
-		tok = newToken(token.MINUS, l.ch, l.line, currCol)
+		if l.peekChar() == '>' {
+			ch := l.ch
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{Type: token.SLIMARROW, Literal: literal}
+		} else {
+			tok = newToken(token.MINUS, l.ch, l.line, currCol)
+		}
 	case '!':
 		if l.peekChar() == '=' {
 			ch := l.ch
@@ -173,4 +180,17 @@ func isDigit(ch byte) bool {
 
 func newToken(tokenType token.TokenType, ch byte, line int, col int) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch), Line: line, Col: col}
+}
+
+func (l Lexer) Positions() (current int, reading int, ch byte) {
+	current = l.position
+	reading = l.readPosition
+	ch = l.ch
+	return
+}
+
+func (l *Lexer) SetPositions(current int, reading int, ch byte) {
+	l.position = current
+	l.readPosition = reading
+	l.ch = ch
 }

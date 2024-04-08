@@ -668,6 +668,53 @@ func TestFunctionLiteralParsing(t *testing.T) {
 	testInfixExpression(t, bodyStmt.Expression, "x", "+", "y")
 }
 
+func TestLambdaLiteralParsing(t *testing.T) {
+	input := `{x, y -> x + y; }`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpresssionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	function, ok := stmt.Expression.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.LambdaLiteral. got=%T",
+			stmt.Expression)
+	}
+
+	if len(function.Parameters) != 2 {
+		t.Fatalf("function literal parameters wrong, want 2. got=%d\n",
+			len(function.Parameters))
+	}
+
+	testLiteralExpression(t, function.Parameters[0], "x")
+	testLiteralExpression(t, function.Parameters[1], "y")
+
+	if len(function.Body.Statements) != 1 {
+		t.Fatalf("function.Body.Statements has not 1 statement. got=%d\n",
+			len(function.Body.Statements))
+	}
+
+	bodyStmt, ok := function.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("function body stmt is not ast.Expression. got=%T",
+			function.Body.Statements[0])
+	}
+
+	testInfixExpression(t, bodyStmt.Expression, "x", "+", "y")
+}
+
 func TestFunctionParameterParsing(t *testing.T) {
 
 	tests := []struct {
@@ -677,6 +724,7 @@ func TestFunctionParameterParsing(t *testing.T) {
 		{input: "fn() {};", expectedParams: []string{}},
 		{input: "fn(x) {};", expectedParams: []string{"x"}},
 		{input: "fn(x, y, z) {};", expectedParams: []string{"x", "y", "z"}},
+		{input: "{x, y, z -> };", expectedParams: []string{"x", "y", "z"}},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -802,6 +850,42 @@ func TestMethodCallExpressionParsingWithFunctionLiteral(t *testing.T) {
 	testLiteralExpression(t, integer, 5)
 }
 
+func TestMethodCallExpressionParsingWithLambda(t *testing.T) {
+	input := "5.({i -> i+2})()"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("stmt is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CallExpression. got=%T",
+			stmt.Expression)
+	}
+	funcLit, ok := exp.Function.(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("exp.Function is not ast.FunctionLiteral. got=%T",
+			funcLit)
+	}
+
+	if len(exp.Arguments) != 1 {
+		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
+	}
+	integer, ok := exp.Arguments[0].(*ast.IntegerLiteral)
+	if !ok {
+		t.Fatalf("first argument not ast.ArrayLiteral. got=%T", exp.Arguments[0])
+	}
+
+	testLiteralExpression(t, integer, 5)
+}
 func TestStringLiteralExpression(t *testing.T) {
 	input := `"hello world";`
 
