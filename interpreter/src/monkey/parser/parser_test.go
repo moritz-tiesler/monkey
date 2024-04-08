@@ -471,6 +471,19 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"1.add(2).add(3)",
 			"add(add(1, 2), 3)",
 		},
+		{
+			"[1, 2, 3].map {x -> x * 2}",
+			"map([1, 2, 3], fn(x) (x * 2))",
+		},
+		{
+
+			"[1, 2, 3].map(fn(x) {x * 2})",
+			"map([1, 2, 3], fn(x) (x * 2))",
+		},
+		{
+			"[1, 2, 3].acc(1) {x -> x * 2}",
+			"acc([1, 2, 3], 1, fn(x) (x * 2))",
+		},
 	}
 	for _, tt := range tests {
 		l := lexer.New(tt.input)
@@ -811,6 +824,78 @@ func TestMethodCallExpressionParsing(t *testing.T) {
 
 	testLiteralExpression(t, exp.Arguments[1], 1)
 	testLiteralExpression(t, exp.Arguments[2], 2)
+}
+
+func TestSingleTrailingLambdaCallParsing(t *testing.T) {
+	input := "map([1, 2, 3]) {x -> x * 2}"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("stmt is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CallExpression. got=%T",
+			stmt.Expression)
+	}
+	if !testIdentifier(t, exp.Function, "map") {
+		return
+	}
+	if len(exp.Arguments) != 2 {
+		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
+	}
+	arr, ok := exp.Arguments[0].(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("first argument not ast.ArrayLiteral. got=%T", exp.Arguments[0])
+	}
+	_, ok = exp.Arguments[1].(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("first argument not ast.FunctionLiteral. got=%T", exp.Arguments[1])
+	}
+
+	testLiteralExpression(t, arr.Elements[0], 1)
+	testLiteralExpression(t, arr.Elements[1], 2)
+	testLiteralExpression(t, arr.Elements[2], 3)
+}
+
+func TestOptionalParenWithTrailingLambda(t *testing.T) {
+	input := "map {x -> x * 2}"
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("stmt is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+	exp, ok := stmt.Expression.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CallExpression. got=%T",
+			stmt.Expression)
+	}
+	if !testIdentifier(t, exp.Function, "map") {
+		return
+	}
+	if len(exp.Arguments) != 1 {
+		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
+	}
+	_, ok = exp.Arguments[0].(*ast.FunctionLiteral)
+	if !ok {
+		t.Fatalf("first argument not ast.ArrayLiteral. got=%T", exp.Arguments[0])
+	}
 }
 
 func TestMethodCallExpressionParsingWithFunctionLiteral(t *testing.T) {

@@ -1,7 +1,37 @@
-let func =  { a ->
-	let b = a + 1
-	return b
+let map = fn(arr, func) {
+    let iter = fn(arr, acc) {
+        if (arr.len() == 0) {
+            return acc
+        } else {
+            iter(arr.rest(), push(acc, func(arr.first())))
+        }
+    }
+    iter(arr, [])
 }
-let x = 3;
-puts(3)
-puts(x)
+
+let forEach = fn(arr, action) {
+	let iter = fn(arr) {
+		if (arr.len() == 0) {
+			return 0
+		} else {
+			action(arr.first())
+			iter(arr.rest())
+		}
+	}
+	iter(arr)
+};
+
+let acc = fn(arr, initial, f) {
+	let iter = fn(arr, curr) {
+		if (arr.len() == 0) {
+			return curr
+		} else {
+			iter(arr.rest(), f(curr, arr.first()))
+		}
+	}
+	iter(arr, initial)
+};
+
+puts([1, 2, 3].acc(100) {x, y -> x + y});
+puts([1, 2, 3].map {x -> x * 2});
+[1, 2, 3].forEach {x -> puts(x)};

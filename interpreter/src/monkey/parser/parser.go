@@ -60,6 +60,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
+	p.registerInfix(token.LBRACE, p.parseCallWithSingleTrailingLambda)
 	p.registerInfix(token.PERIOD, p.parseMethodCallExpression)
 	p.nextToken()
 	p.nextToken()
@@ -364,6 +365,25 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	exp.Start = ast.Position{Line: exp.Token.Line, Col: exp.Token.Col}
 	exp.Arguments = p.parseExpressionList(token.RPAREN)
+	if p.peekTokenIs(token.LBRACE) {
+		p.nextToken()
+		lambda := p.parseLambdaLiteral()
+		exp.Arguments = append(exp.Arguments, lambda)
+	}
+	exp.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
+	return exp
+}
+
+func (p *Parser) parseCallWithSingleTrailingLambda(function ast.Expression) ast.Expression {
+	exp := &ast.CallExpression{Token: p.curToken, Function: function}
+	exp.Start = ast.Position{Line: exp.Token.Line, Col: exp.Token.Col}
+
+	lambda := &ast.FunctionLiteral{Token: p.curToken}
+	lambda.Start = ast.Position{Line: lambda.Token.Line, Col: lambda.Token.Col}
+	lambda.Parameters = p.parserLambdaParameters()
+	lambda.Body = p.parseBlockStatement()
+
+	exp.Arguments = []ast.Expression{lambda}
 	exp.End = ast.Position{Line: p.curToken.Line, Col: p.curToken.Col + 1}
 	return exp
 }
@@ -394,14 +414,20 @@ func (p *Parser) dispatchLBrace() ast.Expression {
 		p.curToken = tokenCur
 		p.peekToken = tokenPeek
 		p.l.SetPositions(anchorCurrent, anchorReading, anchorChar)
-		lit := &ast.FunctionLiteral{Token: p.curToken}
-		lit.Start = ast.Position{Line: lit.Token.Line, Col: lit.Token.Col}
-		lit.Parameters = p.parserLambdaParameters()
-		lit.Body = p.parseBlockStatement()
+		lit := p.parseLambdaLiteral()
 		return lit
 	}
 	return hash
 
+}
+
+func (p *Parser) parseLambdaLiteral() *ast.FunctionLiteral {
+
+	lit := &ast.FunctionLiteral{Token: p.curToken}
+	lit.Start = ast.Position{Line: lit.Token.Line, Col: lit.Token.Col}
+	lit.Parameters = p.parserLambdaParameters()
+	lit.Body = p.parseBlockStatement()
+	return lit
 }
 
 func (p *Parser) parserLambdaParameters() []*ast.Identifier {
@@ -427,30 +453,6 @@ func (p *Parser) parserLambdaParameters() []*ast.Identifier {
 	}
 
 	return identifiers
-}
-
-func (p *Parser) parseCallArguments() []ast.Expression {
-	args := []ast.Expression{}
-
-	if p.peekTokenIs(token.RPAREN) {
-		p.nextToken()
-		return args
-	}
-
-	p.nextToken()
-	args = append(args, p.parseExpression(LOWEST))
-
-	for p.peekTokenIs(token.COMMA) {
-		p.nextToken()
-		p.nextToken()
-		args = append(args, p.parseExpression(LOWEST))
-	}
-
-	if !p.expectPeek(token.RPAREN) {
-		return nil
-	}
-
-	return args
 }
 
 func (p *Parser) parseBoolean() ast.Expression {
@@ -590,10 +592,12 @@ const (
 	PRODUCT
 	PREFIX
 	METHOD
+	LAMBDA
 	CALL
 	INDEX // array[index]
 )
 
+// TODO sometimes a missing semicolon leads to wonky parsing, could be the precedences
 var precedences = map[token.TokenType]int{
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
@@ -603,6 +607,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
+	token.LBRACE:   LAMBDA,
 	token.PERIOD:   METHOD,
 	token.LPAREN:   CALL,
 	token.LBRACKET: INDEX,

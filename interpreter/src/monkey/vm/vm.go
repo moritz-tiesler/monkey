@@ -787,7 +787,6 @@ func (vm *VM) Copy() *VM {
 	copy.stack = append(copy.stack, oldStack...)
 	copy.sp = oldSp
 	copy.globals = append(copy.globals, oldGlobals...)
-	// TODO frameIp still gets changed in the copy when running original vm
 	for i := 0; i < vm.framesIndex; i++ {
 		copy.frames[i] = vm.frames[i].Copy()
 	}
