@@ -55,12 +55,12 @@ func Start(in io.Reader, out io.Writer) {
 	}
 }
 
-func printParserErrors(out io.Writer, errors []string) {
+func printParserErrors(out io.Writer, errors []error) {
 	io.WriteString(out, MONKEY_FACE)
 	io.WriteString(out, "Woops! We ran into some monkey business here!\n")
 	io.WriteString(out, " parser errors:\n")
-	for _, msg := range errors {
-		io.WriteString(out, "\t"+msg+"\n")
+	for _, e := range errors {
+		io.WriteString(out, "\t"+e.Error()+"\n")
 	}
 }
 
@@ -113,12 +113,12 @@ func StartVM(in io.Reader, out io.Writer) {
 	}
 }
 
-func sendErrors(ch chan<- string, errors []string) {
+func sendErrors(ch chan<- string, errors []error) {
 	message := MONKEY_FACE
 	message += "Woops! We ran into some monkey business here!\n"
 	message += " parser errors:\n"
 	for _, e := range errors {
-		message += "\t" + e + "\n"
+		message += "\t" + e.Error() + "\n"
 	}
 	ch <- message
 }

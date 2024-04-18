@@ -13,13 +13,23 @@ type (
 	infixParseFn  func(ast.Expression) ast.Expression
 )
 
+type ParserError struct {
+	message string
+	Line    int
+	Col     int
+}
+
+func (p ParserError) Error() string {
+	return fmt.Sprintf("%s\nLine: %d, Col: %d", p.message, p.Line, p.Col)
+}
+
 type Parser struct {
 	l *lexer.Lexer
 
 	curToken  token.Token
 	peekToken token.Token
 
-	errors []string
+	errors []error
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
@@ -28,7 +38,7 @@ type Parser struct {
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
 		l:      l,
-		errors: []string{},
+		errors: []error{},
 	}
 
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
@@ -292,7 +302,8 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-		p.errors = append(p.errors, msg)
+		pError := ParserError{message: msg, Line: p.curToken.Line, Col: p.curToken.Col}
+		p.errors = append(p.errors, pError)
 		return nil
 	}
 
@@ -396,7 +407,8 @@ func (p *Parser) parseMethodCallExpression(firstArg ast.Expression) ast.Expressi
 	call, ok := methodCall.(*ast.CallExpression)
 	if !ok {
 		msg := fmt.Sprintf("Not a function call %s", methodCall.String())
-		p.errors = append(p.errors, msg)
+		pError := ParserError{message: msg, Line: methodCall.Range().Start.Line, Col: methodCall.Range().Start.Col}
+		p.errors = append(p.errors, pError)
 		return nil
 	}
 	call.Arguments = append([]ast.Expression{firstArg}, call.Arguments...)
@@ -613,17 +625,19 @@ var precedences = map[token.TokenType]int{
 	token.LBRACKET: INDEX,
 }
 
-func (p *Parser) Errors() []string {
+func (p *Parser) Errors() []error {
 	return p.errors
 }
 
 func (p *Parser) peekError(t ...token.TokenType) {
 	msg := fmt.Sprintf("Error at line %d col %d, expected next token to be %s, got %s instead",
 		p.peekToken.Line, p.peekToken.Col, t, p.peekToken.Type)
-	p.errors = append(p.errors, msg)
+	pError := ParserError{message: msg, Line: p.peekToken.Line, Col: p.peekToken.Col}
+	p.errors = append(p.errors, pError)
 }
 
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	msg := fmt.Sprintf("Error at line %d col %d, no prefix parse function of %s found", p.curToken.Line, p.curToken.Col, t)
-	p.errors = append(p.errors, msg)
+	pError := ParserError{message: msg, Line: p.curToken.Line, Col: p.curToken.Col}
+	p.errors = append(p.errors, pError)
 }

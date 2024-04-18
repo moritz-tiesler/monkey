@@ -531,6 +531,21 @@ func (vm *VM) Cycle() error {
 	return nil
 }
 
+type RunTimeError struct {
+	message string
+	Line    int
+	Col     int
+}
+
+func NewRunTimeError(message string, line int, col int) RunTimeError {
+	msg := "Runtime error. " + message
+	return RunTimeError{message: msg, Line: line, Col: col}
+}
+
+func (rte RunTimeError) Error() string {
+	return fmt.Sprintf("%s\nLine: %d, Col: %d", rte.message, rte.Line, rte.Col)
+}
+
 func (vm *VM) RunOp() error {
 	ip := vm.CurrentFrame().Ip
 	ins := vm.CurrentFrame().Instructions()
@@ -541,7 +556,8 @@ func (vm *VM) RunOp() error {
 		vm.CurrentFrame().Ip += 2
 		err := vm.push(vm.constants[constIndex])
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpSetGlobal:
@@ -554,43 +570,50 @@ func (vm *VM) RunOp() error {
 		vm.CurrentFrame().Ip += 2
 		err := vm.push(vm.globals[globalIndex])
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpAdd, code.OpSub, code.OpMul, code.OpDiv:
 		err := vm.executeBinaryOperation(op)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpEqual, code.OpNotEqual, code.OpGreaterThan:
 		err := vm.executeComparison(op)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpBang:
 		err := vm.executeBangOperator()
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpMinus:
 		err := vm.executeMinusOperator()
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpTrue:
 		err := vm.push(True)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpFalse:
 		err := vm.push(False)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpPop:
@@ -611,7 +634,8 @@ func (vm *VM) RunOp() error {
 	case code.OpNull:
 		err := vm.push(Null)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 	case code.OpArray:
 		numElements := int(code.ReadUint16(ins[ip+1:]))
@@ -621,7 +645,8 @@ func (vm *VM) RunOp() error {
 
 		err := vm.push(array)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpHash:
@@ -630,13 +655,15 @@ func (vm *VM) RunOp() error {
 
 		hash, err := vm.buildHash(vm.sp-numElements, vm.sp)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 		vm.sp = vm.sp - numElements
 
 		err = vm.push(hash)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 	case code.OpIndex:
 		index := vm.pop()
@@ -644,7 +671,8 @@ func (vm *VM) RunOp() error {
 
 		err := vm.executeIndexExpression(left, index)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpSetLocal:
@@ -663,16 +691,18 @@ func (vm *VM) RunOp() error {
 
 		err := vm.push(vm.stack[frame.basePointer+int(localIndex)])
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpCall:
 		numArgs := code.ReadUint8(ins[ip+1:])
+		loc := vm.SourceLocation()
 		vm.CurrentFrame().Ip += 1
 
 		err := vm.executeCall(int(numArgs))
 		if err != nil {
-			return err
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpReturnValue:
@@ -683,7 +713,8 @@ func (vm *VM) RunOp() error {
 
 		err := vm.push(returnValue)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpReturn:
@@ -692,7 +723,8 @@ func (vm *VM) RunOp() error {
 
 		err := vm.push(Null)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 	case code.OpGetBuiltin:
 		builinIndex := code.ReadUint8(ins[ip+1:])
@@ -702,7 +734,8 @@ func (vm *VM) RunOp() error {
 
 		err := vm.push(definition.Builtin)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpClosure:
@@ -712,7 +745,8 @@ func (vm *VM) RunOp() error {
 
 		err := vm.pushClosure(int(constIndex), int(numFree))
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	case code.OpGetFree:
@@ -723,13 +757,15 @@ func (vm *VM) RunOp() error {
 
 		err := vm.push(currentClosure.Free[freeIndex])
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 	case code.OpCurrentClosure:
 		currentClosure := vm.CurrentFrame().cl
 		err := vm.push(currentClosure)
 		if err != nil {
-			return err
+			loc := vm.SourceLocation()
+			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
 	}

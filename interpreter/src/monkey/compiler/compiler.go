@@ -88,6 +88,21 @@ func NewWithState(s *SymbolTable, constants []object.Object) *Compiler {
 	return compiler
 }
 
+type CompilerError struct {
+	message string
+	Line    int
+	Col     int
+}
+
+func NewCompilerError(message string, line int, col int) CompilerError {
+	msg := "Compiler error: " + message
+	return CompilerError{message: msg, Line: line, Col: col}
+}
+
+func (ce CompilerError) Error() string {
+	return fmt.Sprintf("%s\nLine: %d, Col: %d", ce.message, ce.Line, ce.Col)
+}
+
 func (c *Compiler) Compile(node ast.Node) error {
 	switch node := node.(type) {
 	case *ast.Program:
@@ -104,7 +119,6 @@ func (c *Compiler) Compile(node ast.Node) error {
 			return err
 		}
 		_ = c.emit(code.OpPop)
-		//c.mapInstructionToNode(c.currenScopeId(), ip, node)
 
 	case *ast.InfixExpression:
 		if node.Operator == "<" {
@@ -146,7 +160,12 @@ func (c *Compiler) Compile(node ast.Node) error {
 		case "!=":
 			c.emit(code.OpNotEqual)
 		default:
-			return fmt.Errorf("unknown operator %s", node.Operator)
+			//return fmt.Errorf("unknown operator %s", node.Operator)
+			return NewCompilerError(
+				fmt.Sprintf("unknown operator %s", node.Operator),
+				node.Range().Start.Line,
+				node.Range().Start.Col,
+			)
 		}
 
 	case *ast.PrefixExpression:
@@ -161,7 +180,12 @@ func (c *Compiler) Compile(node ast.Node) error {
 		case "-":
 			c.emit(code.OpMinus)
 		default:
-			return fmt.Errorf("unknown operator %s", node.Operator)
+			//return fmt.Errorf("unknown operator %s", node.Operator)
+			return NewCompilerError(
+				fmt.Sprintf("unknown operator %s", node.Operator),
+				node.Range().Start.Line,
+				node.Range().Start.Col,
+			)
 		}
 
 	case *ast.IfExpression:
@@ -282,7 +306,12 @@ func (c *Compiler) Compile(node ast.Node) error {
 	case *ast.Identifier:
 		symbol, ok := c.symbolTable.Resolve(node.Value)
 		if !ok {
-			return fmt.Errorf("undefined variable %s", node.Value)
+			//return fmt.Errorf("undefined variable %s", node.Value)
+			return NewCompilerError(
+				fmt.Sprintf("undefined variable %s", node.Value),
+				node.Range().Start.Line,
+				node.Range().Start.Col,
+			)
 		}
 
 		ii := c.loadSymbol(symbol)

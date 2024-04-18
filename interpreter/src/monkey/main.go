@@ -93,7 +93,7 @@ func compileProgram(sourceCode string) error {
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
 		for _, e := range p.Errors() {
-			println(e)
+			println(e.Error())
 		}
 		return fmt.Errorf("exited with parser errors")
 	}

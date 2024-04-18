@@ -39,7 +39,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		//fmt.Printf("\n")
 		//}
 
-		vm := New(comp.Bytecode())
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap, comp.NameStore)
 		err = vm.Run()
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
@@ -529,15 +529,15 @@ func TestCallingFunctionsWithWrongArguments(t *testing.T) {
 	tests := []vmTestCase{
 		{
 			input:    `fn() { 1; }(1);`,
-			expected: `wrong number of arguments: want=0, got=1`,
+			expected: "Runtime error. wrong number of arguments: want=0, got=1\nLine: 1, Col: 1",
 		},
 		{
 			input:    `fn(a) { a; }();`,
-			expected: `wrong number of arguments: want=1, got=0`,
+			expected: "Runtime error. wrong number of arguments: want=1, got=0\nLine: 1, Col: 1",
 		},
 		{
 			input:    `fn(a, b) { a + b; }(1);`,
-			expected: `wrong number of arguments: want=2, got=1`,
+			expected: "Runtime error. wrong number of arguments: want=2, got=1\nLine: 1, Col: 1",
 		},
 	}
 	for _, tt := range tests {
@@ -547,7 +547,7 @@ func TestCallingFunctionsWithWrongArguments(t *testing.T) {
 		if err != nil {
 			t.Fatalf("compiler error: %s", err)
 		}
-		vm := New(comp.Bytecode())
+		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap, comp.NameStore)
 		err = vm.Run()
 		if err == nil {
 			t.Fatalf("expected VM error but resulted in none.")
