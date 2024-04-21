@@ -7,6 +7,7 @@ import (
 	"io"
 	"monkey/compiler"
 	"monkey/evaluator"
+	"monkey/exception"
 	"monkey/lexer"
 	"monkey/object"
 	"monkey/parser"
@@ -55,7 +56,7 @@ func Start(in io.Reader, out io.Writer) {
 	}
 }
 
-func printParserErrors(out io.Writer, errors []error) {
+func printParserErrors(out io.Writer, errors []exception.Exception) {
 	io.WriteString(out, MONKEY_FACE)
 	io.WriteString(out, "Woops! We ran into some monkey business here!\n")
 	io.WriteString(out, " parser errors:\n")
@@ -113,7 +114,7 @@ func StartVM(in io.Reader, out io.Writer) {
 	}
 }
 
-func sendErrors(ch chan<- string, errors []error) {
+func sendErrors(ch chan<- string, errors []exception.Exception) {
 	message := MONKEY_FACE
 	message += "Woops! We ran into some monkey business here!\n"
 	message += " parser errors:\n"

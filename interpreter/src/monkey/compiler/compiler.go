@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"monkey/ast"
 	"monkey/code"
+	"monkey/exception"
 	"monkey/object"
 	"sort"
 )
@@ -90,20 +91,28 @@ func NewWithState(s *SymbolTable, constants []object.Object) *Compiler {
 
 type CompilerError struct {
 	message string
-	Line    int
-	Col     int
+	line    int
+	col     int
 }
 
 func NewCompilerError(message string, line int, col int) CompilerError {
 	msg := "Compiler error: " + message
-	return CompilerError{message: msg, Line: line, Col: col}
+	return CompilerError{message: msg, line: line, col: col}
 }
 
 func (ce CompilerError) Error() string {
-	return fmt.Sprintf("%s\nLine: %d, Col: %d", ce.message, ce.Line, ce.Col)
+	return fmt.Sprintf("%s: Line: %d, Col: %d", ce.message, ce.line, ce.col)
 }
 
-func (c *Compiler) Compile(node ast.Node) error {
+func (ce CompilerError) Line() int {
+	return ce.line
+}
+
+func (ce CompilerError) Col() int {
+	return ce.col
+}
+
+func (c *Compiler) Compile(node ast.Node) exception.Exception {
 	switch node := node.(type) {
 	case *ast.Program:
 		for _, s := range node.Statements {

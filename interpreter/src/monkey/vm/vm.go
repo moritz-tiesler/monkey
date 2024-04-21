@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"monkey/code"
 	"monkey/compiler"
+	"monkey/exception"
 	"monkey/object"
 )
 
@@ -162,7 +163,7 @@ func (vm *VM) StackTop() object.Object {
 	return vm.stack[vm.sp-1]
 }
 
-func (vm *VM) Run() error {
+func (vm *VM) Run() exception.Exception {
 
 	for vm.CurrentFrame().Ip < len(vm.CurrentFrame().Instructions())-1 {
 		err := vm.Cycle()
@@ -493,14 +494,17 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 
 }
 
-type RunCondition func(*VM) (bool, error)
+type RunCondition func(*VM) (bool, exception.Exception)
 
-func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error, bool) {
+func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, exception.Exception, bool) {
 	for vm.CurrentFrame().Ip < len(vm.CurrentFrame().Instructions())-1 {
 		vm.AdvancePointers()
 		stop, err := runCondition(vm)
 		if err != nil {
-			return vm, fmt.Errorf("error when testing condition"), false
+			loc := vm.SourceLocation()
+			return vm,
+				NewRunTimeError("error when testing condition", loc.Range.Start.Line, loc.Range.Start.Col),
+				false
 		}
 		if stop {
 			return vm, nil, true
@@ -511,7 +515,6 @@ func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, error, bool) {
 			}
 		}
 	}
-
 	return vm, nil, false
 }
 
@@ -519,7 +522,7 @@ func (vm *VM) AdvancePointers() {
 	vm.CurrentFrame().Ip++
 }
 
-func (vm *VM) Cycle() error {
+func (vm *VM) Cycle() exception.Exception {
 
 	vm.CurrentFrame().Ip++
 
@@ -533,20 +536,28 @@ func (vm *VM) Cycle() error {
 
 type RunTimeError struct {
 	message string
-	Line    int
-	Col     int
+	line    int
+	col     int
 }
 
 func NewRunTimeError(message string, line int, col int) RunTimeError {
 	msg := "Runtime error. " + message
-	return RunTimeError{message: msg, Line: line, Col: col}
+	return RunTimeError{message: msg, line: line, col: col}
 }
 
 func (rte RunTimeError) Error() string {
-	return fmt.Sprintf("%s\nLine: %d, Col: %d", rte.message, rte.Line, rte.Col)
+	return fmt.Sprintf("%s: Line: %d, Col: %d", rte.message, rte.line, rte.col)
 }
 
-func (vm *VM) RunOp() error {
+func (rte RunTimeError) Line() int {
+	return rte.line
+}
+
+func (rte RunTimeError) Col() int {
+	return rte.col
+}
+
+func (vm *VM) RunOp() exception.Exception {
 	ip := vm.CurrentFrame().Ip
 	ins := vm.CurrentFrame().Instructions()
 	op := code.Opcode(ins[ip])

@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"monkey/ast"
+	"monkey/exception"
 	"monkey/lexer"
 	"monkey/token"
 	"strconv"
@@ -15,12 +16,20 @@ type (
 
 type ParserError struct {
 	message string
-	Line    int
-	Col     int
+	line    int
+	col     int
 }
 
-func (p ParserError) Error() string {
-	return fmt.Sprintf("%s\nLine: %d, Col: %d", p.message, p.Line, p.Col)
+func (pe ParserError) Error() string {
+	return fmt.Sprintf("%s: Line: %d, Col: %d", pe.message, pe.line, pe.col)
+}
+
+func (pe ParserError) Line() int {
+	return pe.line
+}
+
+func (pe ParserError) Col() int {
+	return pe.col
 }
 
 type Parser struct {
@@ -29,7 +38,7 @@ type Parser struct {
 	curToken  token.Token
 	peekToken token.Token
 
-	errors []error
+	errors []exception.Exception
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
@@ -38,7 +47,7 @@ type Parser struct {
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
 		l:      l,
-		errors: []error{},
+		errors: []exception.Exception{},
 	}
 
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
@@ -302,7 +311,7 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-		pError := ParserError{message: msg, Line: p.curToken.Line, Col: p.curToken.Col}
+		pError := ParserError{message: msg, line: p.curToken.Line, col: p.curToken.Col}
 		p.errors = append(p.errors, pError)
 		return nil
 	}
@@ -407,7 +416,7 @@ func (p *Parser) parseMethodCallExpression(firstArg ast.Expression) ast.Expressi
 	call, ok := methodCall.(*ast.CallExpression)
 	if !ok {
 		msg := fmt.Sprintf("Not a function call %s", methodCall.String())
-		pError := ParserError{message: msg, Line: methodCall.Range().Start.Line, Col: methodCall.Range().Start.Col}
+		pError := ParserError{message: msg, line: methodCall.Range().Start.Line, col: methodCall.Range().Start.Col}
 		p.errors = append(p.errors, pError)
 		return nil
 	}
@@ -625,19 +634,19 @@ var precedences = map[token.TokenType]int{
 	token.LBRACKET: INDEX,
 }
 
-func (p *Parser) Errors() []error {
+func (p *Parser) Errors() []exception.Exception {
 	return p.errors
 }
 
 func (p *Parser) peekError(t ...token.TokenType) {
 	msg := fmt.Sprintf("Error at line %d col %d, expected next token to be %s, got %s instead",
 		p.peekToken.Line, p.peekToken.Col, t, p.peekToken.Type)
-	pError := ParserError{message: msg, Line: p.peekToken.Line, Col: p.peekToken.Col}
+	pError := ParserError{message: msg, line: p.peekToken.Line, col: p.peekToken.Col}
 	p.errors = append(p.errors, pError)
 }
 
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	msg := fmt.Sprintf("Error at line %d col %d, no prefix parse function of %s found", p.curToken.Line, p.curToken.Col, t)
-	pError := ParserError{message: msg, Line: p.curToken.Line, Col: p.curToken.Col}
+	pError := ParserError{message: msg, line: p.curToken.Line, col: p.curToken.Col}
 	p.errors = append(p.errors, pError)
 }

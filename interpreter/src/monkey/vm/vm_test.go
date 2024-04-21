@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"monkey/ast"
 	"monkey/compiler"
+	"monkey/exception"
 	"monkey/lexer"
 	"monkey/object"
 	"monkey/parser"
@@ -759,7 +760,7 @@ type vmDebuggerTestCase struct {
 	input            string
 	debugFuncInput   compiler.LocationData
 	expectedLocation compiler.LocationData
-	debugAction      func(compiler.LocationData) func(*VM) (bool, error)
+	debugAction      func(compiler.LocationData) RunCondition
 	vmState          State
 }
 
@@ -768,7 +769,7 @@ type vmDebuggerTestCaseWithPreparation struct {
 	debugFuncInput   compiler.LocationData
 	prepFunc         func(*VM) *VM
 	expectedLocation compiler.LocationData
-	debugAction      func(*VM, compiler.LocationData) func(*VM) (bool, error)
+	debugAction      func(*VM, compiler.LocationData) RunCondition
 	vmState          State
 }
 
@@ -867,9 +868,9 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 	}
 }
 
-func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
+func stepOver(current compiler.LocationData) RunCondition {
 
-	return func(vm *VM) (bool, error) {
+	return func(vm *VM) (bool, exception.Exception) {
 
 		cycleLocation := vm.SourceLocation()
 		cycleLine := cycleLocation.Range.Start.Line
@@ -882,8 +883,8 @@ func stepOver(current compiler.LocationData) func(vm *VM) (bool, error) {
 	}
 }
 
-func runUntilBreakPoint(breakOn compiler.LocationData) func(vm *VM) (bool, error) {
-	return func(vm *VM) (bool, error) {
+func runUntilBreakPoint(breakOn compiler.LocationData) RunCondition {
+	return func(vm *VM) (bool, exception.Exception) {
 		if vm.State() == DONE {
 			return true, nil
 		}
@@ -1065,9 +1066,9 @@ squareAndDouble(2)
 	runVmDebuggingTests(t, tests)
 }
 
-func stepInto(vm *VM, loc compiler.LocationData) func(*VM) (bool, error) {
+func stepInto(vm *VM, loc compiler.LocationData) RunCondition {
 	startingDepth := vm.CallDepth
-	return func(vm *VM) (bool, error) {
+	return func(vm *VM) (bool, exception.Exception) {
 		callDepth := vm.CallDepth
 		if callDepth > startingDepth {
 			return true, nil
@@ -1122,9 +1123,9 @@ let c = 5
 	runVmDebuggingTestsWithPrep(t, tests)
 }
 
-func stepOut(vm *VM, outOf compiler.LocationData) func(*VM) (bool, error) {
+func stepOut(vm *VM, outOf compiler.LocationData) RunCondition {
 	startingDepth := vm.CallDepth
-	return func(vm *VM) (bool, error) {
+	return func(vm *VM) (bool, exception.Exception) {
 		callDepth := vm.CallDepth
 		if callDepth < startingDepth {
 			return true, nil
