@@ -530,15 +530,15 @@ func TestCallingFunctionsWithWrongArguments(t *testing.T) {
 	tests := []vmTestCase{
 		{
 			input:    `fn() { 1; }(1);`,
-			expected: "Runtime error. wrong number of arguments: want=0, got=1\nLine: 1, Col: 1",
+			expected: "Runtime error. wrong number of arguments: want=0, got=1: Line: 1, Col: 1",
 		},
 		{
 			input:    `fn(a) { a; }();`,
-			expected: "Runtime error. wrong number of arguments: want=1, got=0\nLine: 1, Col: 1",
+			expected: "Runtime error. wrong number of arguments: want=1, got=0: Line: 1, Col: 1",
 		},
 		{
 			input:    `fn(a, b) { a + b; }(1);`,
-			expected: "Runtime error. wrong number of arguments: want=2, got=1\nLine: 1, Col: 1",
+			expected: "Runtime error. wrong number of arguments: want=2, got=1: Line: 1, Col: 1",
 		},
 	}
 	for _, tt := range tests {
@@ -766,10 +766,9 @@ type vmDebuggerTestCase struct {
 
 type vmDebuggerTestCaseWithPreparation struct {
 	input            string
-	debugFuncInput   compiler.LocationData
 	prepFunc         func(*VM) *VM
 	expectedLocation compiler.LocationData
-	debugAction      func(*VM, compiler.LocationData) RunCondition
+	debugAction      func(*VM) RunCondition
 	vmState          State
 }
 
@@ -815,9 +814,9 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
 		}
 
-		if vm.State() != tt.vmState {
+		if actualState := vm.State(); actualState != tt.vmState {
 
-			t.Errorf("expected running=%v, got=%v", tt.vmState, vm.State())
+			t.Errorf("expected running=%v, got=%v", tt.vmState, actualState)
 		}
 
 	}
@@ -849,7 +848,7 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 
 		vm := NewFromMain(comp.MainFn(), comp.Bytecode(), comp.LocationMap, comp.NameStore)
 		vm = tt.prepFunc(vm)
-		step := tt.debugAction(vm, tt.debugFuncInput)
+		step := tt.debugAction(vm)
 		vm, err, _ = vm.RunWithCondition(step)
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
@@ -868,13 +867,17 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 	}
 }
 
-func stepOver(current compiler.LocationData) RunCondition {
+func stepOver(vm *VM) RunCondition {
+	staringLoc := vm.SourceLocation()
+	startingLine := staringLoc.Range.Start.Line
+	startingDepth := vm.CallDepth
 
 	return func(vm *VM) (bool, exception.Exception) {
 
 		cycleLocation := vm.SourceLocation()
 		cycleLine := cycleLocation.Range.Start.Line
-		if current.Range.Start.Line != cycleLine {
+		cycleDepth := vm.CallDepth
+		if startingLine != cycleLine && cycleDepth <= startingDepth {
 			vm.CurrentFrame().Ip--
 			return true, nil
 		} else {
@@ -901,19 +904,75 @@ func runUntilBreakPoint(breakOn compiler.LocationData) RunCondition {
 
 func TestStepOver(t *testing.T) {
 
-	tests := []vmDebuggerTestCase{
+	tests := []vmDebuggerTestCaseWithPreparation{
+		{
+			input: `
+let x = 2;
+let fun = fn(x) {
+	let iter = fn(n) {
+		if (n == 0) { }
+		else {
+			iter(x-1);
+		}
+	};
+};
+fun(x);
+`,
+			debugAction: stepOver,
+			vmState:     STOPPED,
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 11, Col: 1},
+					End:   ast.Position{Line: 11, Col: 4},
+				},
+			},
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 1},
+						End:   ast.Position{Line: 3, Col: 10},
+					},
+				}
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+		},
+		{
+			input: `
+let arr = [1, 2, 3]
+let b = arr[0]
+let c = 4
+`,
+
+			expectedLocation: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 4, Col: 9},
+					End:   ast.Position{Line: 4, Col: 10},
+				},
+			},
+			debugAction: stepOver,
+			vmState:     STOPPED,
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 9},
+						End:   ast.Position{Line: 3, Col: 15},
+					},
+				}
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+		},
 		{
 			input: `
 let a = 2
 let b = 3
 let c = 4
 `,
-			debugFuncInput: compiler.LocationData{
-				Depth: 0,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 2, Col: 1},
-					End:   ast.Position{Line: 2, Col: 10}}},
-
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
@@ -922,11 +981,22 @@ let c = 4
 				},
 			},
 			debugAction: stepOver,
-			vmState:     STOPPED,
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 2, Col: 10},
+					},
+				}
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+			vmState: STOPPED,
 		},
 	}
 
-	runVmDebuggingTests(t, tests)
+	runVmDebuggingTestsWithPrep(t, tests)
 }
 
 func TestBreakPoints(t *testing.T) {
@@ -1066,7 +1136,7 @@ squareAndDouble(2)
 	runVmDebuggingTests(t, tests)
 }
 
-func stepInto(vm *VM, loc compiler.LocationData) RunCondition {
+func stepInto(vm *VM) RunCondition {
 	startingDepth := vm.CallDepth
 	return func(vm *VM) (bool, exception.Exception) {
 		callDepth := vm.CallDepth
@@ -1092,11 +1162,6 @@ let b = 3
 func(b)
 let c = 5
 `,
-			debugFuncInput: compiler.LocationData{
-				Depth: 0,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 7, Col: 1},
-					End:   ast.Position{Line: 7, Col: 8}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 1,
 				Range: ast.NodeRange{
@@ -1123,7 +1188,7 @@ let c = 5
 	runVmDebuggingTestsWithPrep(t, tests)
 }
 
-func stepOut(vm *VM, outOf compiler.LocationData) RunCondition {
+func stepOut(vm *VM) RunCondition {
 	startingDepth := vm.CallDepth
 	return func(vm *VM) (bool, exception.Exception) {
 		callDepth := vm.CallDepth
@@ -1149,11 +1214,6 @@ let b = 3
 func(b)
 let c = 5
 `,
-			debugFuncInput: compiler.LocationData{
-				Depth: 1,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 4},
-					End:   ast.Position{Line: 3, Col: 17}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{
@@ -1185,11 +1245,6 @@ let b = 3
 let res = func(b)
 let c = 5
 `,
-			debugFuncInput: compiler.LocationData{
-				Depth: 1,
-				Range: ast.NodeRange{
-					Start: ast.Position{Line: 3, Col: 4},
-					End:   ast.Position{Line: 3, Col: 17}}},
 			expectedLocation: compiler.LocationData{
 				Depth: 0,
 				Range: ast.NodeRange{

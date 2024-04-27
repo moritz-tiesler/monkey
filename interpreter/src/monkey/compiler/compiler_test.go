@@ -1113,8 +1113,84 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 	}
 }
 
+// TODO: test ranges with current closure and recursion:
+//let fun = fn(x) {
+//let iter = fn(n) {
+//if (n == 0) {
+
+//} else {
+//iter(x-1);
+//}
+//};
+//};
+
+// fun(2);
 func TestRanges(t *testing.T) {
 	tests := []rangeTest{
+		{
+			input: `
+let arr = [1, 2]
+let a = arr[1]
+`,
+			expectedLocations: []LocationData{
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 2, Col: 17},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 11},
+						End:   ast.Position{Line: 2, Col: 17},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 12},
+						End:   ast.Position{Line: 2, Col: 13},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 15},
+						End:   ast.Position{Line: 2, Col: 16},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 1},
+						End:   ast.Position{Line: 3, Col: 15},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 9},
+						End:   ast.Position{Line: 3, Col: 15},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 9},
+						End:   ast.Position{Line: 3, Col: 12},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 13},
+						End:   ast.Position{Line: 3, Col: 14},
+					},
+				},
+			},
+		},
 		{
 			input: `
 let a = 2

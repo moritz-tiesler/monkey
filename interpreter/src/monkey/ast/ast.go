@@ -497,6 +497,6 @@ func (ie *IndexExpression) String() string {
 func (ie *IndexExpression) Range() NodeRange {
 	return NodeRange{
 		Start: Position{ie.Left.Range().Start.Line, ie.Left.Range().Start.Col},
-		End:   Position{ie.Index.Range().End.Line, ie.Index.Range().End.Col},
+		End:   Position{ie.Index.Range().End.Line, ie.Index.Range().End.Col + 1},
 	}
 }

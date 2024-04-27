@@ -7,18 +7,18 @@ let map = fn(arr, func) {
         }
     }
     iter(arr, [])
-}
+};
 
 let forEach = fn(arr, action) {
 	let iter = fn(arr) {
-		if (arr.len() != 0) {
+		if (arr.len() > 0) {
 			action(arr.first())
 			iter(arr.rest())
 		}			
 	}
-	iter(arr)
-	arr
-}
+	iter(arr);
+	arr;
+};
 
 let acc = fn(arr, initial, f) {
 	let iter = fn(arr, curr) {
@@ -30,10 +30,46 @@ let acc = fn(arr, initial, f) {
 	}
 	iter(arr, initial)
 };
+let arr_all = fn(arr, pred) {
+    let iter = fn(arr) {
+        if (arr.len() == 0) {
+            return true 
+        }
+        if (!pred(arr.first())) {
+            return false
+        } else {
+            return iter(arr.rest())
+        }
+    };
+    iter(arr)
+};
 
-[1, 2, 3]
-	.map {x -> x * 2}
-	.forEach {x -> puts(x)}
-	.acc(100) {x, y -> x + y }
-	.puts();
+let arr_any = fn(arr, pred) {
+    let iter = fn(arr) {
+        if (arr.len() == 0) {
+            return false
+        }
+        if (pred(arr.first())) {
+            return true
+        } else {
+            return iter(arr.rest())
+        } 
+    };
+    iter(arr)
+};
 
+let d = 4;
+puts([2, 3, 1].arr_all {x -> x < 4}); 
+[1, 2, 3] .map {x -> x * 2} .forEach {x -> puts(x)} .acc(100) {x, y -> x + y } .puts();
+
+let fun = fn(x) {
+	let iter = fn(n) {
+		if (n == 0) {
+
+		} else {
+			iter(x-1);
+		}
+	};
+};
+
+fun(2);

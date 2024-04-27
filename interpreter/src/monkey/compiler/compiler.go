@@ -198,6 +198,7 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		}
 
 	case *ast.IfExpression:
+		// TODO check how ins and node pos are mapped
 		err := c.Compile(node.Condition)
 		if err != nil {
 			return err
@@ -258,7 +259,8 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 				return err
 			}
 		}
-		c.emit(code.OpArray, len(node.Elements))
+		pos := c.emit(code.OpArray, len(node.Elements))
+		c.mapInstructionToNode(c.currenScopeId(), pos, node)
 
 	case *ast.HashLiteral:
 		keys := []ast.Expression{}
@@ -293,7 +295,8 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 			return err
 		}
 
-		c.emit(code.OpIndex)
+		pos := c.emit(code.OpIndex)
+		c.mapInstructionToNode(c.currenScopeId(), pos, node)
 
 	case *ast.LetStatement:
 		var ii int
