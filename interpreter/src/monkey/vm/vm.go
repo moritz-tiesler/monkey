@@ -725,11 +725,13 @@ func (vm *VM) RunOp() exception.Exception {
 
 	case code.OpCall:
 		numArgs := code.ReadUint8(ins[ip+1:])
-		loc := vm.SourceLocation()
+		ipBeforeCall := vm.CurrentFrame().Ip
 		vm.CurrentFrame().Ip += 1
 
+		// TODO: Surface errors in builtin functions
 		err := vm.executeCall(int(numArgs))
 		if err != nil {
+			loc := vm.mustFindLocation(vm.CurrentFrame(), ipBeforeCall)
 			return NewRunTimeError(err.Error(), loc.Range.Start.Line, loc.Range.Start.Col)
 		}
 
