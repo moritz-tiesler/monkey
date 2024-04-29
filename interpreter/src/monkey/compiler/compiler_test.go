@@ -1103,6 +1103,7 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 			//t.Fatalf("cannot get value for key=%v", k)
 			//}
 			if !ok {
+				t.Errorf("error in test=%d", i+1)
 				t.Errorf("location not found\n%s: expected=%v", bytecode.Instructions.String(), expected)
 			}
 		}
@@ -1113,20 +1114,132 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 	}
 }
 
-// TODO: test ranges with current closure and recursion:
-//let fun = fn(x) {
-//let iter = fn(n) {
-//if (n == 0) {
-
-//} else {
-//iter(x-1);
-//}
-//};
-//};
-
-// fun(2);
 func TestRanges(t *testing.T) {
 	tests := []rangeTest{
+		{
+			input: `
+let fun = fn(x) {
+	let iter = fn(n) {
+		if (n == 0) {
+
+		} else {
+			iter(n-1);
+		}
+	};
+	iter(x);
+};
+fun(2);
+			`,
+			expectedLocations: []LocationData{},
+		},
+		{
+			input: `
+let val = if (true) {
+    2
+} else {
+    3
+}
+`,
+			expectedLocations: []LocationData{
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 6, Col: 2},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 5},
+						End:   ast.Position{Line: 3, Col: 6},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 5},
+						End:   ast.Position{Line: 5, Col: 6},
+					},
+				},
+			},
+		},
+		{
+			input: `
+let rec = fn(n) {
+    if (n==0){}
+    else {
+        rec(n-1)
+    }
+}
+`,
+			expectedLocations: []LocationData{
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 1},
+						End:   ast.Position{Line: 7, Col: 2},
+					},
+				},
+				LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 2, Col: 11},
+						End:   ast.Position{Line: 7, Col: 2},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 9},
+						End:   ast.Position{Line: 3, Col: 10},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 12},
+						End:   ast.Position{Line: 3, Col: 13},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 9},
+						End:   ast.Position{Line: 5, Col: 12},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 9},
+						End:   ast.Position{Line: 5, Col: 17},
+					},
+				},
+				// Duplicate since we track the expression statement too
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 9},
+						End:   ast.Position{Line: 5, Col: 17},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 13},
+						End:   ast.Position{Line: 5, Col: 14},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 5, Col: 15},
+						End:   ast.Position{Line: 5, Col: 16},
+					},
+				},
+			},
+		},
 		{
 			input: `
 let arr = [1, 2]

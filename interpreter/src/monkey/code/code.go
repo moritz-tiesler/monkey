@@ -70,6 +70,15 @@ const (
 	OpCurrentClosure
 )
 
+func (op Opcode) InstructionLength() int {
+	l := 1
+	def := definitions[op]
+	for _, w := range def.OperandWidths {
+		l += w
+	}
+	return l
+}
+
 type Definition struct {
 	Name          string
 	OperandWidths []int

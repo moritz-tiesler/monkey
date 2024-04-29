@@ -198,14 +198,13 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		}
 
 	case *ast.IfExpression:
-		// TODO check how ins and node pos are mapped
 		err := c.Compile(node.Condition)
 		if err != nil {
 			return err
 		}
 		// Emit an `OpJumpNotTruthy` with a bogus value
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
-		c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node)
+		//c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node)
 
 		err = c.Compile(node.Consequence)
 		if err != nil {
@@ -216,7 +215,7 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		}
 		// Emit an `OpJump` with a bogus value
 		jumpPos := c.emit(code.OpJump, 9999)
-		c.mapInstructionToNode(c.currenScopeId(), jumpPos, node.Consequence)
+		//c.mapInstructionToNode(c.currenScopeId(), jumpPos, node.Consequence)
 
 		afterConsequencePos := len(c.currentInstructions())
 		c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
@@ -448,6 +447,14 @@ func (c *Compiler) removeLastPop() {
 
 	c.scopes[c.scopeIndex].instructions = new
 	c.scopes[c.scopeIndex].lastInstruction = previous
+
+	oldKey := LocationKey{c.currenScopeId(), last.Position}
+	savedLoc, ok := c.LocationMap[oldKey]
+	if ok {
+		newKey := LocationKey{c.currenScopeId(), last.Position - 1}
+		c.LocationMap[newKey] = savedLoc
+		delete(c.LocationMap, oldKey)
+	}
 
 }
 

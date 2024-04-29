@@ -471,14 +471,31 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 	if vm.State() == DONE {
 		return compiler.LocationData{}
 	}
-	startingP := vm.CurrentFrame().Ip
-	ip := vm.CurrentFrame().Ip
+	frame := vm.CurrentFrame()
+	startingIp := frame.Ip
+	return vm.mustFindLocation(frame, startingIp)
+
+}
+
+func (vm *VM) SourceLocationInFrame(f *Frame) compiler.LocationData {
+	if vm.CurrentInstructionIsPop() {
+		return vm.mustFindLocation(f, f.Ip-1)
+	} else {
+		vm.CurrentInstructionIsPop()
+		return vm.mustFindLocation(f, f.Ip)
+	}
+}
+
+func (vm *VM) mustFindLocation(f *Frame, startingIp int) compiler.LocationData {
+
+	ins := f.Instructions()
+	scopeId := f.cl.Fn
+	ip := startingIp
+
 	var location compiler.LocationData
-	var found bool
 	var lk compiler.LocationKey
-	var scopeId *object.CompiledFunction
-	for ip <= len(vm.frames[vm.framesIndex-1].Instructions()) {
-		scopeId = vm.CurrentFrame().cl.Fn
+	var found bool
+	for ip <= len(ins) {
 		lk = compiler.LocationKey{ScopeId: scopeId, InstructionIndex: ip}
 		location, found = vm.LocationMap[lk]
 		if found {
@@ -486,12 +503,12 @@ func (vm *VM) SourceLocation() compiler.LocationData {
 		}
 		ip = ip + 1
 	}
+
 	if found {
 		return location
 	} else {
-		panic(fmt.Sprintf("Could not find location for ins=%d\n%s", startingP, scopeId.Instructions.String()))
+		panic(fmt.Sprintf("Could not find location for ins=%d\n%s", startingIp, scopeId.Instructions.String()))
 	}
-
 }
 
 type RunCondition func(*VM) (bool, exception.Exception)
@@ -855,38 +872,52 @@ func (vm VM) Frames() []*Frame {
 	return vm.frames
 }
 
-func (vm VM) ActiveObjects(f Frame) ([]*object.Object, map[*object.Object]string) {
-	vars := []*object.Object{}
-	names := make(map[*object.Object]string)
+func (vm VM) ActiveObjects(f Frame) ([]object.Object, map[object.Object]string) {
+	vars := []object.Object{}
+	names := make(map[object.Object]string)
 	ins := f.Instructions()
 
 	// collect passed arguments
 	for i := 0; i < f.cl.Fn.NumParameters; i++ {
 		argIndex := f.basePointer + i
 		arg := vm.stack[argIndex]
-		vars = append(vars, &arg)
-		names[&arg] = vm.GetLocalName(f.cl.Fn, i)
+		vars = append(vars, arg)
+		names[arg] = vm.GetLocalName(f.cl.Fn, i)
 
 	}
 
-	for i := 0; i < f.Ip; i++ {
+	for i := 0; i < f.Ip; {
 		op := code.Opcode(ins[i])
 		switch op {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[i+1:])
 			name := vm.GetGlobalName(int(globalIndex))
 			global := vm.globals[globalIndex]
-			names[&global] = name
-			vars = append(vars, &global)
+			names[global] = name
+			vars = append(vars, global)
 
 		case code.OpSetLocal:
 			localIndex := code.ReadUint8(ins[i+1:])
 			name := vm.GetLocalName(f.cl.Fn, int(localIndex))
 			local := vm.stack[f.basePointer+int(localIndex)]
-			names[&local] = name
-			vars = append(vars, &local)
+			names[local] = name
+			vars = append(vars, local)
 		}
+
+		instructionLen := op.InstructionLength()
+		i += instructionLen
 	}
 
 	return vars, names
+}
+
+func (vm *VM) CurrentInstructionIsPop() bool {
+
+	f := vm.CurrentFrame()
+	ip := f.Ip - 1
+	if ip < 0 {
+		return false
+	}
+	ins := f.Instructions()[ip]
+	return ins == byte(code.OpPop)
 }

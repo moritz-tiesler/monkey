@@ -824,7 +824,7 @@ func runVmDebuggingTests(t *testing.T, tests []vmDebuggerTestCase) {
 
 func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPreparation) {
 
-	for _, tt := range tests {
+	for k, tt := range tests {
 		program := parse(tt.input)
 		comp := compiler.New()
 		err := comp.Compile(program)
@@ -856,6 +856,7 @@ func runVmDebuggingTestsWithPrep(t *testing.T, tests []vmDebuggerTestCaseWithPre
 		// stackElem := vm.LastPoppedStackElem()
 		currentLocation := vm.SourceLocation()
 		if currentLocation != tt.expectedLocation {
+			t.Errorf("error in test %d", k+1)
 			t.Errorf("wrong source location: expected=%v, got=%v", tt.expectedLocation, vm.SourceLocation())
 		}
 
@@ -1492,7 +1493,7 @@ puts(sum)
 			frameVars, names := vm.ActiveObjects(*frame)
 			for j, acutalVar := range frameVars {
 				expected := tt.expected[i][j]
-				testExpectedObject(t, expected, *acutalVar)
+				testExpectedObject(t, expected, acutalVar)
 
 				acutalName := names[acutalVar]
 				expectedName := tt.expectedNames[i][j]
