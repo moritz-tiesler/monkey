@@ -2,9 +2,10 @@ package evaluator
 
 import (
 	"fmt"
-	"monkey/ast"
-	"monkey/object"
-	"monkey/token"
+
+	"github.com/moritz-tiesler/monkey/ast"
+	"github.com/moritz-tiesler/monkey/object"
+	"github.com/moritz-tiesler/monkey/token"
 )
 
 func quote(node ast.Node, env *object.Environment) object.Object {

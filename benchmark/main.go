@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"monkey/compiler"
-	"monkey/evaluator"
-	"monkey/lexer"
-	"monkey/object"
-	"monkey/parser"
-	"monkey/vm"
 	"time"
+
+	"github.com/moritz-tiesler/monkey/compiler"
+	"github.com/moritz-tiesler/monkey/evaluator"
+	"github.com/moritz-tiesler/monkey/lexer"
+	"github.com/moritz-tiesler/monkey/object"
+	"github.com/moritz-tiesler/monkey/parser"
+	"github.com/moritz-tiesler/monkey/vm"
 )
 
 var engine = flag.String("engine", "vm", "use 'vm' or 'eval'")

@@ -1,10 +1,11 @@
 package evaluator
 
 import (
-	"monkey/lexer"
-	"monkey/object"
-	"monkey/parser"
 	"testing"
+
+	"github.com/moritz-tiesler/monkey/lexer"
+	"github.com/moritz-tiesler/monkey/object"
+	"github.com/moritz-tiesler/monkey/parser"
 )
 
 func testEval(input string) object.Object {

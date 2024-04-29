@@ -3,7 +3,7 @@ package evaluator
 import (
 	"testing"
 
-	"monkey/object"
+	"github.com/moritz-tiesler/monkey/object"
 )
 
 func TestQuote(t *testing.T) {

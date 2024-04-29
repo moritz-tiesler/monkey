@@ -3,15 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"monkey/compiler"
-	"monkey/evaluator"
-	"monkey/lexer"
-	"monkey/object"
-	"monkey/parser"
-	"monkey/repl"
-	"monkey/vm"
 	"os"
 	"os/user"
+
+	"github.com/moritz-tiesler/monkey/compiler"
+	"github.com/moritz-tiesler/monkey/evaluator"
+	"github.com/moritz-tiesler/monkey/lexer"
+	"github.com/moritz-tiesler/monkey/object"
+	"github.com/moritz-tiesler/monkey/parser"
+	"github.com/moritz-tiesler/monkey/repl"
+	"github.com/moritz-tiesler/monkey/vm"
 )
 
 func main() {

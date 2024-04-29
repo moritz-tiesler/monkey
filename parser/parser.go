@@ -2,11 +2,12 @@ package parser
 
 import (
 	"fmt"
-	"monkey/ast"
-	"monkey/exception"
-	"monkey/lexer"
-	"monkey/token"
 	"strconv"
+
+	"github.com/moritz-tiesler/monkey/ast"
+	"github.com/moritz-tiesler/monkey/exception"
+	"github.com/moritz-tiesler/monkey/lexer"
+	"github.com/moritz-tiesler/monkey/token"
 )
 
 type (

@@ -2,11 +2,12 @@ package compiler
 
 import (
 	"fmt"
-	"monkey/ast"
-	"monkey/code"
-	"monkey/exception"
-	"monkey/object"
 	"sort"
+
+	"github.com/moritz-tiesler/monkey/ast"
+	"github.com/moritz-tiesler/monkey/code"
+	"github.com/moritz-tiesler/monkey/exception"
+	"github.com/moritz-tiesler/monkey/object"
 )
 
 const StackSize = 2048

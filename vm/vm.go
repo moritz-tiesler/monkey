@@ -2,10 +2,11 @@ package vm
 
 import (
 	"fmt"
-	"monkey/code"
-	"monkey/compiler"
-	"monkey/exception"
-	"monkey/object"
+
+	"github.com/moritz-tiesler/monkey/code"
+	"github.com/moritz-tiesler/monkey/compiler"
+	"github.com/moritz-tiesler/monkey/exception"
+	"github.com/moritz-tiesler/monkey/object"
 )
 
 const StackSize = compiler.StackSize

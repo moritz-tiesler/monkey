@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
-	"monkey/ast"
-	"monkey/code"
 	"strings"
+
+	"github.com/moritz-tiesler/monkey/ast"
+	"github.com/moritz-tiesler/monkey/code"
 )
 
 type ObjectType string

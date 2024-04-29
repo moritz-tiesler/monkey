@@ -2,13 +2,14 @@ package vm
 
 import (
 	"fmt"
-	"monkey/ast"
-	"monkey/compiler"
-	"monkey/exception"
-	"monkey/lexer"
-	"monkey/object"
-	"monkey/parser"
 	"testing"
+
+	"github.com/moritz-tiesler/monkey/ast"
+	"github.com/moritz-tiesler/monkey/compiler"
+	"github.com/moritz-tiesler/monkey/exception"
+	"github.com/moritz-tiesler/monkey/lexer"
+	"github.com/moritz-tiesler/monkey/object"
+	"github.com/moritz-tiesler/monkey/parser"
 )
 
 type vmTestCase struct {

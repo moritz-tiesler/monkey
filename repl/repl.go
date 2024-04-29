@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"monkey/compiler"
-	"monkey/evaluator"
-	"monkey/exception"
-	"monkey/lexer"
-	"monkey/object"
-	"monkey/parser"
-	"monkey/vm"
+
+	"github.com/moritz-tiesler/monkey/compiler"
+	"github.com/moritz-tiesler/monkey/evaluator"
+	"github.com/moritz-tiesler/monkey/exception"
+	"github.com/moritz-tiesler/monkey/lexer"
+	"github.com/moritz-tiesler/monkey/object"
+	"github.com/moritz-tiesler/monkey/parser"
+	"github.com/moritz-tiesler/monkey/vm"
 )
 
 const PROMPT = ">>"
