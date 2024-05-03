@@ -205,7 +205,7 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		}
 		// Emit an `OpJumpNotTruthy` with a bogus value
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
-		c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node.Condition)
+		//c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node)
 
 		err = c.Compile(node.Consequence)
 		if err != nil {
@@ -231,7 +231,6 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 			if c.lastInstructionIs(code.OpPop) {
 				c.removeLastPop()
 			}
-			c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node.Alternative)
 		}
 		afterAlternativePos := len(c.currentInstructions())
 		c.changeOperand(jumpPos, afterAlternativePos)
@@ -331,14 +330,11 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
 	case *ast.Boolean:
-		var ii int
 		if node.Value {
 			c.emit(code.OpTrue)
 		} else {
 			c.emit(code.OpFalse)
 		}
-		c.mapInstructionToNode(c.currenScopeId(), ii, node)
-
 	case *ast.FunctionLiteral:
 		var ii int
 		c.enterScope()

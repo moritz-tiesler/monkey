@@ -1119,50 +1119,34 @@ func TestRanges(t *testing.T) {
 	tests := []rangeTest{
 		{
 			input: `
+let fun = fn(x) {
+	let iter = fn(n) {
+		if (n == 0) {
+
+		} else {
+			iter(n-1);
+		}
+	};
+	iter(x);
+};
+fun(2);
+			`,
+			expectedLocations: []LocationData{},
+		},
+		{
+			input: `
 let val = if (true) {
     2
 } else {
-    2
+    3
 }
 `,
 			expectedLocations: []LocationData{
-				// the let statement
 				LocationData{
 					Depth: 0,
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 2, Col: 1},
 						End:   ast.Position{Line: 6, Col: 2},
-					},
-				},
-				// the if-expression
-				//LocationData{
-				//Depth: 0,
-				//Range: ast.NodeRange{
-				//Start: ast.Position{Line: 2, Col: 11},
-				//End:   ast.Position{Line: 6, Col: 2},
-				//},
-				//},
-				// the consequence
-				//LocationData{
-				//Depth: 0,
-				//Range: ast.NodeRange{
-				//Start: ast.Position{Line: 2, Col: 11},
-				//End:   ast.Position{Line: 4, Col: 2},
-				//},
-				//},
-				// the condition
-				LocationData{
-					Depth: 0,
-					Range: ast.NodeRange{
-						Start: ast.Position{Line: 4, Col: 8},
-						End:   ast.Position{Line: 6, Col: 2},
-					},
-				},
-				LocationData{
-					Depth: 0,
-					Range: ast.NodeRange{
-						Start: ast.Position{Line: 2, Col: 15},
-						End:   ast.Position{Line: 2, Col: 19},
 					},
 				},
 				LocationData{
@@ -1180,22 +1164,6 @@ let val = if (true) {
 					},
 				},
 			},
-		},
-		{
-			input: `
-let fun = fn(x) {
-	let iter = fn(n) {
-		if (n == 0) {
-
-		} else {
-			iter(n-1);
-		}
-	};
-	iter(x);
-};
-fun(2);
-			`,
-			expectedLocations: []LocationData{},
 		},
 		{
 			input: `
@@ -1233,13 +1201,6 @@ let rec = fn(n) {
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 3, Col: 12},
 						End:   ast.Position{Line: 3, Col: 13},
-					},
-				},
-				LocationData{
-					Depth: 1,
-					Range: ast.NodeRange{
-						Start: ast.Position{Line: 4, Col: 10},
-						End:   ast.Position{Line: 6, Col: 6},
 					},
 				},
 				LocationData{
