@@ -516,6 +516,10 @@ type RunCondition func(*VM) (bool, exception.Exception)
 func (vm *VM) RunWithCondition(runCondition RunCondition) (*VM, exception.Exception, bool) {
 	for vm.CurrentFrame().Ip < len(vm.CurrentFrame().Instructions())-1 {
 		vm.AdvancePointers()
+		if vm.CurrentInstructionIsJump() {
+			vm.RunOp()
+			continue
+		}
 		stop, err := runCondition(vm)
 		if err != nil {
 			loc := vm.SourceLocation()
