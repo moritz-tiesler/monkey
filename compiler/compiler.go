@@ -343,9 +343,9 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 	case *ast.Boolean:
 		var ii int
 		if node.Value {
-			c.emit(code.OpTrue)
+			ii = c.emit(code.OpTrue)
 		} else {
-			c.emit(code.OpFalse)
+			ii = c.emit(code.OpFalse)
 		}
 		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 	case *ast.FunctionLiteral:

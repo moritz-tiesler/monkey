@@ -1355,6 +1355,35 @@ func TestActiveVars(t *testing.T) {
 	tests := []varTest{
 		{
 			input: `
+let var = 4;
+let val = if (true) {
+	2
+} else {
+	3
+};
+let unknown = 5
+`,
+
+			breakPoint: compiler.LocationData{
+				Depth: 0,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 3, Col: 9},
+					End:   ast.Position{Line: 3, Col: 10},
+				},
+			},
+			expected: [][]any{
+				{
+					4,
+				},
+			},
+			expectedNames: [][]string{
+				{
+					"var",
+				},
+			},
+		},
+		{
+			input: `
 let inner = fn(x, y) {
 	let res = x + y
 	return res
