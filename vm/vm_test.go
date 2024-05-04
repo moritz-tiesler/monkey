@@ -914,6 +914,72 @@ func TestStepOver(t *testing.T) {
 	tests := []vmDebuggerTestCaseWithPreparation{
 		{
 			input: `
+let val = fn(x) {
+    if (false) {
+    	2
+	} else {
+    	3
+	}
+};
+val(2)
+
+`,
+			debugAction: stepOver,
+			vmState:     STOPPED,
+			expectedLocation: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 6, Col: 6},
+					End:   ast.Position{Line: 6, Col: 7},
+				},
+			},
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 1},
+						End:   ast.Position{Line: 3, Col: 10},
+					},
+				}
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+		},
+		{
+			input: `
+let val = fn(x) {
+	if (true) {
+    	2
+	} else {
+    	3
+	}
+};
+val(2)
+
+`,
+			debugAction: stepOver,
+			vmState:     STOPPED,
+			expectedLocation: compiler.LocationData{
+				Depth: 1,
+				Range: ast.NodeRange{
+					Start: ast.Position{Line: 4, Col: 6},
+					End:   ast.Position{Line: 4, Col: 7},
+				},
+			},
+			prepFunc: func(vm *VM) *VM {
+				bp := compiler.LocationData{
+					Depth: 0,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 1},
+						End:   ast.Position{Line: 3, Col: 10},
+					},
+				}
+				vm, _, _ = vm.RunWithCondition(runUntilBreakPoint(bp))
+				return vm
+			},
+		},
+		{
+			input: `
 let x = 2;
 let fun = fn(x) {
 	let iter = fn(n) {

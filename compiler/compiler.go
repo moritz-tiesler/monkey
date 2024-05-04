@@ -205,9 +205,10 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		}
 		// Emit an `OpJumpNotTruthy` with a bogus value
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
-		//c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node)
+		c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node.Condition)
 
-		if len(node.Consequence.Statements) == 0 {
+		consequenceIsEmpty := len(node.Consequence.Statements) == 0
+		if consequenceIsEmpty {
 			c.emit(code.OpNull)
 		} else {
 			err = c.Compile(node.Consequence)
@@ -220,7 +221,11 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		}
 		// Emit an `OpJump` with a bogus value
 		jumpPos := c.emit(code.OpJump, 9999)
-		//c.mapInstructionToNode(c.currenScopeId(), jumpPos, node.Consequence)
+		if !consequenceIsEmpty {
+			idxFinalStmt := len(node.Consequence.Statements) - 1
+			finalStatement := node.Consequence.Statements[idxFinalStmt]
+			c.mapInstructionToNode(c.currenScopeId(), jumpPos, finalStatement)
+		}
 
 		afterConsequencePos := len(c.currentInstructions())
 		c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
@@ -334,11 +339,13 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 
 	case *ast.Boolean:
+		var ii int
 		if node.Value {
 			c.emit(code.OpTrue)
 		} else {
 			c.emit(code.OpFalse)
 		}
+		c.mapInstructionToNode(c.currenScopeId(), ii, node)
 	case *ast.FunctionLiteral:
 		var ii int
 		c.enterScope()
