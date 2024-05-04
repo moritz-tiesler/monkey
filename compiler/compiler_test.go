@@ -1189,22 +1189,6 @@ func runRangeTests(t *testing.T, tests []rangeTest) {
 
 func TestRanges(t *testing.T) {
 	tests := []rangeTest{
-		//{
-		//input: `
-		//let fun = fn(x) {
-		//let iter = fn(n) {
-		//if (n == 0) {
-
-		//} else {
-		//iter(n-1);
-		//}
-		//};
-		//iter(x);
-		//};
-		//fun(2);
-		//`,
-		//expectedLocations: []LocationData{},
-		//},
 		{
 			input: `
 let val = if (true) {
@@ -1280,6 +1264,13 @@ let rec = fn(n) {
 					Range: ast.NodeRange{
 						Start: ast.Position{Line: 2, Col: 11},
 						End:   ast.Position{Line: 7, Col: 2},
+					},
+				},
+				LocationData{
+					Depth: 1,
+					Range: ast.NodeRange{
+						Start: ast.Position{Line: 3, Col: 9},
+						End:   ast.Position{Line: 3, Col: 10},
 					},
 				},
 				LocationData{

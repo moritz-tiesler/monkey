@@ -225,6 +225,8 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 			idxFinalStmt := len(node.Consequence.Statements) - 1
 			finalStatement := node.Consequence.Statements[idxFinalStmt]
 			c.mapInstructionToNode(c.currenScopeId(), jumpPos, finalStatement)
+		} else {
+			c.mapInstructionToNode(c.currenScopeId(), jumpPos, node.Condition)
 		}
 
 		afterConsequencePos := len(c.currentInstructions())
