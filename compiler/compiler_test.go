@@ -178,6 +178,78 @@ func TestConditionals(t *testing.T) {
 	tests := []compilerTestCase{
 		{
 			input: `
+			if (true) { } else { 4 } 3333;
+			`,
+			expectedConstants: []interface{}{4, 3333},
+			expectedInstructions: []code.Instructions{
+				// 0000
+				code.Make(code.OpTrue),
+				// 0001
+				code.Make(code.OpJumpNotTruthy, 8),
+				// 0004
+				code.Make(code.OpNull),
+				// 005
+				code.Make(code.OpJump, 11),
+				// 008
+				code.Make(code.OpConstant, 0),
+				// 0011
+				code.Make(code.OpPop),
+				// 012
+				code.Make(code.OpConstant, 1),
+				// 0015
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input: `
+			if (true) { 10; } else { } 3333;
+			`,
+			expectedConstants: []interface{}{10, 3333},
+			expectedInstructions: []code.Instructions{
+				// 0000
+				code.Make(code.OpTrue),
+				// 0001
+				code.Make(code.OpJumpNotTruthy, 10),
+				// 0004
+				code.Make(code.OpConstant, 0),
+				// 007
+				code.Make(code.OpJump, 11),
+				// 0010
+				code.Make(code.OpNull),
+				// 0011
+				code.Make(code.OpPop),
+				// 012
+				code.Make(code.OpConstant, 1),
+				// 0015
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input: `
+			if (true) { }; 3333;
+			`,
+			expectedConstants: []interface{}{3333},
+			expectedInstructions: []code.Instructions{
+				// 0000
+				code.Make(code.OpTrue),
+				// 0001
+				code.Make(code.OpJumpNotTruthy, 8),
+				// 0004
+				code.Make(code.OpNull),
+				// 0005
+				code.Make(code.OpJump, 9),
+				// 0008
+				code.Make(code.OpNull),
+				// 0009
+				code.Make(code.OpPop),
+				// 0010
+				code.Make(code.OpConstant, 0),
+				// 0013
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input: `
 			if (true) { 10 }; 3333;
 			`,
 			expectedConstants: []interface{}{10, 3333},

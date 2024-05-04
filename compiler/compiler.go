@@ -207,9 +207,13 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		jumpNotTruthyPos := c.emit(code.OpJumpNotTruthy, 9999)
 		//c.mapInstructionToNode(c.currenScopeId(), jumpNotTruthyPos, node)
 
-		err = c.Compile(node.Consequence)
-		if err != nil {
-			return err
+		if len(node.Consequence.Statements) == 0 {
+			c.emit(code.OpNull)
+		} else {
+			err = c.Compile(node.Consequence)
+			if err != nil {
+				return err
+			}
 		}
 		if c.lastInstructionIs(code.OpPop) {
 			c.removeLastPop()
@@ -221,7 +225,7 @@ func (c *Compiler) Compile(node ast.Node) exception.Exception {
 		afterConsequencePos := len(c.currentInstructions())
 		c.changeOperand(jumpNotTruthyPos, afterConsequencePos)
 
-		if node.Alternative == nil {
+		if node.Alternative == nil || len(node.Alternative.Statements) == 0 {
 			c.emit(code.OpNull)
 		} else {
 			err := c.Compile(node.Alternative)
