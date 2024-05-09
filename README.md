@@ -1,4 +1,4 @@
-A Go implementation of the [Monkey Language](https://compilerbook.com/).
+A Go implementation of the [Monkey Language](https://monkeylang.org/).
 
 [Online Demo](https://moritz-tiesler.github.io/repl/)
 
